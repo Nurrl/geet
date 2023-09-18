@@ -5,7 +5,7 @@ use std::{
 };
 
 use color_eyre::eyre;
-use parse_display::FromStr;
+use parse_display::{Display, FromStr};
 use russh::{server::Msg, Channel, ChannelMsg};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -14,7 +14,7 @@ use tokio::{
 
 use crate::repository;
 
-#[derive(Debug, FromStr)]
+#[derive(Debug, FromStr, Display)]
 #[display("{} '{repository}'", style = "kebab-case")]
 pub enum Service {
     GitUploadPack { repository: repository::Id },

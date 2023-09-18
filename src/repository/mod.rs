@@ -9,7 +9,7 @@ pub const DEFAULT_HEAD_REF: &str = "refs/heads/main";
 /// and in repository namespaces.
 pub const AUTHORITY_REPOSITORY_NAME: &str = "?.git";
 
-mod id;
+pub mod id;
 pub use id::Id;
 
 pub mod authority;
@@ -20,6 +20,7 @@ pub struct Repository {
 }
 
 impl Repository {
+    /// Initialize the repository pointed by the [`Id`] in the `storage` path.
     pub fn init(storage: &Path, id: &Id) -> Result<Self, git2::Error> {
         let repository = git2::Repository::init_bare(id.to_path(storage))?;
         repository.set_head(DEFAULT_HEAD_REF)?;
@@ -27,12 +28,14 @@ impl Repository {
         Ok(Self { inner: repository })
     }
 
+    /// Open the repository pointed by the [`Id`] in the `storage` path.
     pub fn open(storage: &Path, id: &Id) -> Result<Self, git2::Error> {
         let repository = git2::Repository::open_bare(id.to_path(storage))?;
 
         Ok(Self { inner: repository })
     }
 
+    /// Install server-side hooks for the repository pointed by the [`Id`] in the `storage` path.
     pub fn hook(storage: &Path, id: &Id) -> Result<(), eyre::Error> {
         // Ensure the directory exists and is a git repository
         Self::open(storage, id)?;
@@ -71,9 +74,8 @@ impl std::ops::Deref for Repository {
     }
 }
 
-/// The repository type regarding it's [`Id`].
-pub enum Type<'i> {
-    OriginAuthority(&'i Id),
-    NamespaceAuthority(&'i Id),
-    Plain(&'i Id),
+impl From<git2::Repository> for Repository {
+    fn from(value: git2::Repository) -> Self {
+        Self { inner: value }
+    }
 }

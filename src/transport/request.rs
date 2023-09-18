@@ -11,7 +11,8 @@ use tracing::Instrument;
 use crate::{
     repository::{
         authority::{Authority, Namespace, Origin, Visibility},
-        Id, Repository, Type,
+        id::Type,
+        Id, Repository,
     },
     transport::service::ServiceAccess,
 };
@@ -84,11 +85,11 @@ impl Request {
         match name.as_str() {
             // Restrict the environment variables to theses
             "GIT_PROTOCOL" => {
-                tracing::trace!("Stored environment variable `{name}={value}`");
+                tracing::debug!("Stored environment variable `{name}={value}`");
 
                 self.envs.insert(name, value);
             }
-            _ => tracing::trace!("Ignored illegal environment variable `{name}={value}`"),
+            _ => tracing::debug!("Ignored illegal environment variable `{name}={value}`"),
         }
 
         let _ = self.session.channel_success(self.channel.id()).await;
@@ -102,7 +103,7 @@ impl Request {
             .parse()
             .wrap_err("Received an illegal service request")?;
 
-        tracing::info!("Received new service request: {service:?}",);
+        tracing::info!("Received new service request: {service}",);
 
         // Open the `origin` repository or create it if non-existant.
         let repository = Repository::open(&self.storage, &Id::origin())
@@ -185,6 +186,8 @@ impl Request {
                         .session
                         .exit_status_request(self.channel.id(), status.code().unwrap_or(1) as u32)
                         .await;
+
+                    tracing::info!("Service request completed: {service}, {status}");
 
                     Ok(())
                 }

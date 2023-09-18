@@ -7,7 +7,7 @@ use std::{
 
 use color_eyre::eyre;
 
-use super::{Type, AUTHORITY_REPOSITORY_NAME};
+use super::AUTHORITY_REPOSITORY_NAME;
 
 /// The standard extension for git repositories.
 const REPOSITORY_NAME_EXT: &str = ".git";
@@ -92,6 +92,13 @@ impl FromStr for Id {
             repository,
         })
     }
+}
+
+/// The repository type regarding it's [`Id`].
+pub enum Type<'i> {
+    OriginAuthority(&'i Id),
+    NamespaceAuthority(&'i Id),
+    Plain(&'i Id),
 }
 
 impl std::fmt::Display for Id {
