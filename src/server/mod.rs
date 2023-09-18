@@ -1,3 +1,5 @@
+//! Types and structs related to _ssh connection & session handling_.
+
 use std::{net::SocketAddr, path::PathBuf, time::Duration};
 
 use clap::Parser;
@@ -34,6 +36,7 @@ pub struct Server {
 }
 
 impl Server {
+    /// Bind and start the server from the configuration.
     pub async fn bind(mut self) -> eyre::Result<()> {
         self.storage = self
             .storage
@@ -86,7 +89,7 @@ impl Server {
         russh::server::run(
             config.into(),
             &*self.bind.clone().leak(),
-            Factory::from(self, gitconfig),
+            Factory::new(self, gitconfig),
         )
         .await
         .map_err(Into::into)

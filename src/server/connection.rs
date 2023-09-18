@@ -12,6 +12,8 @@ use tokio::task::JoinHandle;
 use super::Server;
 use crate::transport::{GitConfig, PubKey, Request};
 
+/// A structure containing connection informations and configuration.
+/// implementing [`server::Handler`] to process incoming sessions.
 pub struct Connection {
     server: Arc<Server>,
     gitconfig: Arc<GitConfig>,

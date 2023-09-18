@@ -4,6 +4,7 @@ use crate::transport::GitConfig;
 
 use super::{Connection, Server};
 
+/// A factory creating [`Connection`] from the [`Server`] configuration.
 #[derive(Debug)]
 pub struct Factory {
     server: Arc<Server>,
@@ -11,7 +12,7 @@ pub struct Factory {
 }
 
 impl Factory {
-    pub fn from(server: Server, gitconfig: GitConfig) -> Self {
+    pub fn new(server: Server, gitconfig: GitConfig) -> Self {
         Self {
             server: server.into(),
             gitconfig: gitconfig.into(),
