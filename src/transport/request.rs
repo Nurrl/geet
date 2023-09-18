@@ -22,6 +22,8 @@ impl Request {
         }
     }
 
+    /// Push a new environment variable to the service request,
+    /// the environment will only be saved if deemed safe and necessary.
     pub fn push_env(&mut self, name: &str, value: &str) {
         match name {
             // Restrict the environment variables to theses
@@ -34,6 +36,8 @@ impl Request {
         }
     }
 
+    /// Process the service request from the requested service
+    /// and the acquired context.
     pub fn process(&self, data: &[u8]) -> eyre::Result<()> {
         let service: Service = String::from_utf8(data.to_vec())
             .inspect_err(|err| {

@@ -26,6 +26,17 @@ impl Connection {
             requests: Default::default(),
         }
     }
+
+    /// Retrieves the client key from the inner connection.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if called before the authentication procedure.
+    pub fn key(&self) -> &key::PublicKey {
+        self.key
+            .as_ref()
+            .expect("Public key missing from connection context.")
+    }
 }
 
 #[async_trait]
@@ -69,7 +80,9 @@ impl server::Handler for Connection {
             public_key.fingerprint()
         );
 
+        // Save the client key for further authentication later
         self.key = Some(public_key.clone());
+
         Ok((self, Auth::Accept))
     }
 
@@ -94,10 +107,7 @@ impl server::Handler for Connection {
     async fn auth_succeeded(self, session: Session) -> Result<(Self, Session), Self::Error> {
         tracing::info!(
             "Successfully opened SSH session for `{}`",
-            self.key
-                .as_ref()
-                .map(key::PublicKey::fingerprint)
-                .unwrap_or_default()
+            self.key().fingerprint()
         );
 
         Ok((self, session))
@@ -111,20 +121,13 @@ impl server::Handler for Connection {
         tracing::info!(
             "Opening a `session` channel@{} for `{}`",
             channel.id(),
-            self.key
-                .as_ref()
-                .map(key::PublicKey::fingerprint)
-                .unwrap_or_default()
+            self.key().fingerprint()
         );
 
-        if let Some(ref key) = self.key {
-            self.requests
-                .insert(channel.id(), Request::new(key.clone(), channel));
+        self.requests
+            .insert(channel.id(), Request::new(self.key().clone(), channel));
 
-            Ok((self, true, session))
-        } else {
-            Ok((self, false, session))
-        }
+        Ok((self, true, session))
     }
 
     async fn channel_close(
@@ -134,10 +137,7 @@ impl server::Handler for Connection {
     ) -> Result<(Self, Session), Self::Error> {
         tracing::info!(
             "Closed channel@{channel} for `{}`",
-            self.key
-                .as_ref()
-                .map(key::PublicKey::fingerprint)
-                .unwrap_or_default()
+            self.key().fingerprint()
         );
 
         self.requests.remove(&channel);
@@ -153,7 +153,7 @@ impl server::Handler for Connection {
         mut session: Session,
     ) -> Result<(Self, Session), Self::Error> {
         match self.requests.get_mut(&channel) {
-            Some(tunnel) => tunnel.push_env(variable_name, variable_value),
+            Some(request) => request.push_env(variable_name, variable_value),
             None => {
                 session.disconnect(
                     russh::Disconnect::ProtocolError,
