@@ -2,6 +2,8 @@ use std::{io::ErrorKind, path::Path};
 
 use color_eyre::eyre;
 
+use crate::hooks;
+
 /// Defines the default git `HEAD` ref when creating a new repository
 pub const DEFAULT_HEAD_REF: &str = "refs/heads/main";
 
@@ -43,7 +45,7 @@ impl Repository {
         let program = std::env::args().next().expect("The env contains no arg0");
         let hookdir = id.to_path(storage).join("hooks");
 
-        for hook in ["pre-receive", "update", "post-receive"] {
+        for hook in hooks::HOOKS {
             let link = hookdir.join(hook);
 
             match std::fs::read_link(&link) {

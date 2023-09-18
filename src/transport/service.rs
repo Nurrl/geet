@@ -44,6 +44,7 @@ impl Service {
     ) -> eyre::Result<ExitStatus> {
         let mut child = match self {
             Self::GitUploadPack { repository } => Command::new("git-upload-pack")
+                .env_clear()
                 .envs(envs)
                 .arg("--strict")
                 .arg("--timeout=1")
@@ -54,6 +55,8 @@ impl Service {
                 .kill_on_drop(true)
                 .spawn()?,
             Self::GitReceivePack { repository } => Command::new("git-receive-pack")
+                .env_clear()
+                .envs(envs)
                 .arg(repository.to_path(storage))
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())

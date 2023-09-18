@@ -9,6 +9,7 @@ use tokio::task::JoinHandle;
 use tracing::Instrument;
 
 use crate::{
+    hooks,
     repository::{
         authority::{Authority, Namespace, Origin, Visibility},
         id::Type,
@@ -174,6 +175,14 @@ impl Request {
         if allow {
             // Install our server-side hooks
             Repository::hook(&self.storage, service.repository())?;
+            self.envs.insert(
+                hooks::STORAGE_PATH_ENV.into(),
+                self.storage.to_string_lossy().into(),
+            );
+            self.envs.insert(
+                hooks::REPOSITORY_ID_ENV.into(),
+                service.repository().to_string(),
+            );
 
             // Execute the git service
             match service

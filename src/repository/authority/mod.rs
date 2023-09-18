@@ -24,9 +24,22 @@ pub trait Authority: Serialize + DeserializeOwned {
     /// The in-repository path to the Authority file.
     const PATH: &'static str = "authority.yaml";
 
-    /// Read the [`Authority`] from the provided repository.
+    /// Read the [`Authority`] from the `HEAD` of the repository.
     fn read(repository: &Repository) -> Result<Self, Error> {
         let head = repository.head()?.peel_to_commit()?;
+        let tree = head.tree()?;
+
+        Ok(serde_yaml::from_slice(
+            tree.get_path(Path::new(Self::PATH))?
+                .to_object(repository)?
+                .peel_to_blob()?
+                .content(),
+        )?)
+    }
+
+    /// Read the [`Authority`] from the provided `commit` in the repository.
+    fn read_commit(repository: &Repository, hash: &str) -> Result<Self, Error> {
+        let head = repository.find_commit(git2::Oid::from_str(hash)?)?;
         let tree = head.tree()?;
 
         Ok(serde_yaml::from_slice(

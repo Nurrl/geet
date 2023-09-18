@@ -7,7 +7,7 @@ use crate::{repository::Id, transport::Key};
 pub struct Namespace {
     name: String,
     keys: Vec<Key>,
-    repositories: Vec<Repository>,
+    repositories: Vec<RepositoryDef>,
 }
 
 impl Namespace {
@@ -23,7 +23,7 @@ impl Namespace {
         self.keys.iter().any(|k| k == key)
     }
 
-    pub fn repository(&self, id: &Id) -> Option<&Repository> {
+    pub fn repository(&self, id: &Id) -> Option<&RepositoryDef> {
         self.repositories.iter().find(|repo| {
             repo.name
                 .as_str()
@@ -41,22 +41,22 @@ impl Authority for Namespace {}
 
 /// The configuration for a repository, with some metadata
 /// and some technical configuration.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Repository {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepositoryDef {
     name: String,
     description: Option<String>,
     license: Option<String>,
     visibility: Visibility,
 }
 
-impl Repository {
+impl RepositoryDef {
     pub fn visibility(&self) -> &Visibility {
         &self.visibility
     }
 }
 
 /// Repository visibility level to a non-owner user.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Visibility {
     /// Only repo owner can clone this repository.
