@@ -67,8 +67,9 @@ impl Request {
                     }
                 }
 
-                // Finally close the SSH channel
-                self.channel.close().await.expect("Unable to close channel");
+                if let Err(err) = self.channel.close().await {
+                    tracing::error!("Unable to close channel@{}: {err:#}", self.channel.id());
+                }
             }
             .instrument(span),
         )

@@ -1,7 +1,7 @@
 use std::{
     ffi::OsStr,
     path::Path,
-    process::{ExitStatus, Stdio},
+    process::{ExitStatus, Output, Stdio},
 };
 
 use color_eyre::eyre;
@@ -43,14 +43,14 @@ impl Service {
                 .arg(repository.to_path(storage))
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
-                .stderr(Stdio::null())
+                .stderr(Stdio::piped())
                 .kill_on_drop(true)
                 .spawn()?,
             Self::GitReceivePack { repository } => Command::new("git-receive-pack")
                 .arg(repository.to_path(storage))
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
-                .stderr(Stdio::null())
+                .stderr(Stdio::piped())
                 .kill_on_drop(true)
                 .spawn()?,
         };
@@ -96,6 +96,9 @@ impl Service {
                         _ => ()
                     }
                 }
+                _ = child.wait() => {
+                    drop(stdin.take());
+                }
                 // Exit the loop once everything is flushed
                 true = async { stdin.is_none() && done } => {
                     break;
@@ -103,6 +106,16 @@ impl Service {
             }
         }
 
-        Ok(child.wait().await?)
+        let Output { status, stderr, .. } = child.wait_with_output().await?;
+
+        if !stderr.is_empty() {
+            tracing::error!(
+                "Service errored (exit-code {}): {}",
+                status.code().unwrap_or(i32::MAX),
+                String::from_utf8_lossy(&stderr)
+            );
+        }
+
+        Ok(status)
     }
 }
