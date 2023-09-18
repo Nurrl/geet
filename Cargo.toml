@@ -17,6 +17,7 @@ tracing-subscriber = { version = "0.3.17", features = [
     "tracing-log",
 ] }
 
+git2 = { version = "0.18.0", default-features = false }
 russh = "0.38.0"
 russh-keys = "0.38.0"
 parse-display = "0.8.2"

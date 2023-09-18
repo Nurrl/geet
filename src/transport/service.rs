@@ -3,17 +3,17 @@ use parse_display::FromStr;
 use crate::repository;
 
 #[derive(Debug, FromStr)]
-#[display("{} '{path}'", style = "kebab-case")]
+#[display("{} '{repository}'", style = "kebab-case")]
 pub enum Service {
-    GitUploadPack { path: repository::Path },
-    GitReceivePack { path: repository::Path },
+    GitUploadPack { repository: repository::Id },
+    GitReceivePack { repository: repository::Id },
 }
 
 impl Service {
-    pub fn path(&self) -> &repository::Path {
+    pub fn repository(&self) -> &repository::Id {
         match self {
-            Service::GitUploadPack { path } => path,
-            Service::GitReceivePack { path } => path,
+            Service::GitUploadPack { repository } => repository,
+            Service::GitReceivePack { repository } => repository,
         }
     }
 }

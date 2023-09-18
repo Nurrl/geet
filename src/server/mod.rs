@@ -67,6 +67,9 @@ impl russh::server::Server for Server {
     type Handler = connection::Connection;
 
     fn new_client(&mut self, addr: Option<std::net::SocketAddr>) -> Self::Handler {
-        Connection::new(addr.expect("A client connected without an `addr`"))
+        Connection::new(
+            self.config.clone(),
+            addr.expect("A client connected without an `addr`"),
+        )
     }
 }

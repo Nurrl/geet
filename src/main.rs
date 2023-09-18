@@ -24,7 +24,10 @@ async fn main() -> eyre::Result<()> {
     let config: config::Config =
         serde_yaml::from_reader(file).wrap_err("failed to parse the configuration file")?;
 
-    tracing::info!("Starting up the `geet` daemon..");
+    tracing::info!(
+        "Starting up the `geet` daemon in `{}`..",
+        config.storage.to_str().unwrap_or("<non-unicode>")
+    );
 
     // Finally configure and start the server
     server::Server::from(config).bind().await

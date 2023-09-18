@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::SocketAddr};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
 use async_trait::async_trait;
 use color_eyre::eyre;
@@ -7,11 +7,13 @@ use russh::{
     Channel, ChannelId,
 };
 use russh_keys::key;
+use tracing::Instrument;
 
-use crate::transport::Request;
+use crate::{config::Config, transport::Request};
 
 #[derive(Debug)]
 pub struct Connection {
+    config: Arc<Config>,
     addr: SocketAddr,
     key: Option<key::PublicKey>,
 
@@ -19,8 +21,9 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(addr: SocketAddr) -> Self {
+    pub fn new(config: Arc<Config>, addr: SocketAddr) -> Self {
         Self {
+            config,
             addr,
             key: None,
             requests: Default::default(),
@@ -124,8 +127,10 @@ impl server::Handler for Connection {
             self.key().fingerprint()
         );
 
-        self.requests
-            .insert(channel.id(), Request::new(self.key().clone(), channel));
+        self.requests.insert(
+            channel.id(),
+            Request::new(self.key().clone(), self.config.storage.clone(), channel),
+        );
 
         Ok((self, true, session))
     }
@@ -172,9 +177,22 @@ impl server::Handler for Connection {
         data: &[u8],
         mut session: Session,
     ) -> Result<(Self, Session), Self::Error> {
+        let key = self.key().fingerprint().to_string();
+
         match self.requests.get_mut(&channel) {
             Some(request) => {
-                if request.process(data).await.is_err() {
+                let span = tracing::span!(
+                    tracing::Level::INFO,
+                    "service-request",
+                    %key,
+                    %channel,
+                );
+
+                if let Err(err) = request.process(data).instrument(span.clone()).await {
+                    span.in_scope(
+                        || tracing::warn!("Unable to proccess service request: {err:#}",),
+                    );
+
                     session.disconnect(
                         russh::Disconnect::ByApplication,
                         "Unable to process service request.",
