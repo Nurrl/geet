@@ -4,18 +4,19 @@ use color_eyre::eyre;
 use russh::{MethodSet, SshId};
 use russh_keys::key::{KeyPair, SignatureHash};
 
-use crate::config;
-
 mod connection;
 pub use connection::Connection;
 
+mod config;
+pub use config::Config;
+
 #[derive(Debug)]
 pub struct Server {
-    config: Arc<config::ServerConfig>,
+    config: Arc<Config>,
 }
 
-impl From<config::ServerConfig> for Server {
-    fn from(value: config::ServerConfig) -> Self {
+impl From<Config> for Server {
+    fn from(value: Config) -> Self {
         Self {
             config: value.into(),
         }

@@ -1,15 +1,11 @@
-#![feature(result_option_inspect)]
-
 use clap::Parser;
 use color_eyre::eyre;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
+use geet::server;
+
 mod config;
 use config::Cli;
-
-mod repository;
-mod server;
-mod transport;
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
