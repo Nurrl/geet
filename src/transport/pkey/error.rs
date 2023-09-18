@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+/// A set of possible errors occuring while manipulation public-keys.
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Utf8 error: {0}")]

@@ -20,7 +20,9 @@ use crate::{
 
 use super::{GitConfig, PubKey, Service};
 
-pub struct Request {
+/// A tunnel a request is operated in,
+/// this handles messages from a `session` type [`Channel`].
+pub struct Tunnel {
     storage: PathBuf,
     gitconfig: Arc<GitConfig>,
 
@@ -31,7 +33,7 @@ pub struct Request {
     envs: HashMap<String, String>,
 }
 
-impl Request {
+impl Tunnel {
     pub fn new(
         storage: PathBuf,
         gitconfig: Arc<GitConfig>,

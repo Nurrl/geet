@@ -10,7 +10,7 @@ use russh_keys::key;
 use tokio::task::JoinHandle;
 
 use super::Server;
-use crate::transport::{GitConfig, PubKey, Request};
+use crate::transport::{GitConfig, PubKey, Tunnel};
 
 /// A structure containing connection informations and configuration.
 /// implementing [`server::Handler`] to process incoming sessions.
@@ -137,7 +137,7 @@ impl server::Handler for Connection {
 
         self.requests.insert(
             channel.id(),
-            Request::new(
+            Tunnel::new(
                 self.server.storage.to_path_buf(),
                 self.gitconfig.clone(),
                 self.key().clone(),

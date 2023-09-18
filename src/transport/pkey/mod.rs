@@ -1,3 +1,5 @@
+//! Public-key handling and convertion between formats.
+
 use std::net::IpAddr;
 
 use serde_with::{DeserializeFromStr, SerializeDisplay};

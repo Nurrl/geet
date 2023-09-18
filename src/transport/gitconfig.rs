@@ -3,12 +3,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// A handle to a `.gitconfig` file for our remote.
 #[derive(Debug)]
 pub struct GitConfig {
     path: PathBuf,
 }
 
 impl GitConfig {
+    /// The name of the file being populated in the remote's storage.
     pub const PATH: &'static str = ".gitconfig";
 
     pub fn new(storage: &Path) -> Self {
@@ -42,6 +44,7 @@ impl GitConfig {
         Ok(())
     }
 
+    /// Setup the subcommand required environment variables to use the [`GitConfig`].
     pub fn env(&self, envs: &mut HashMap<String, String>) {
         envs.insert(
             "GIT_CONFIG_GLOBAL".into(),

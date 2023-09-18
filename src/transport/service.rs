@@ -14,6 +14,7 @@ use tokio::{
 
 use crate::repository;
 
+/// A representation of the service request received from the git client.
 #[derive(Debug, FromStr, Display)]
 #[display("{} '{repository}'", style = "kebab-case")]
 pub enum Service {
