@@ -171,6 +171,10 @@ impl Request {
         };
 
         if allow {
+            // Install our server-side hooks
+            Repository::hook(&self.storage, service.repository())?;
+
+            // Execute the git service
             match service
                 .exec(&self.envs, &self.storage, &mut self.channel)
                 .await
