@@ -7,7 +7,7 @@ use russh::{
     Channel, ChannelId,
 };
 use russh_keys::key;
-use tracing::Instrument;
+use tokio::task::JoinHandle;
 
 use crate::{
     config::Config,
@@ -19,7 +19,7 @@ pub struct Connection {
     addr: SocketAddr,
     key: Option<Key>,
 
-    requests: HashMap<ChannelId, Request>,
+    requests: HashMap<ChannelId, JoinHandle<()>>,
 }
 
 impl Connection {
@@ -131,7 +131,13 @@ impl server::Handler for Connection {
 
         self.requests.insert(
             channel.id(),
-            Request::new(self.key().clone(), self.config.storage.clone(), channel),
+            Request::new(
+                self.key().clone(),
+                self.config.storage.clone(),
+                channel,
+                session.handle(),
+            )
+            .spawn(),
         );
 
         Ok((self, true, session))
@@ -147,68 +153,9 @@ impl server::Handler for Connection {
             self.key().fingerprint()
         );
 
-        self.requests.remove(&channel);
-
-        Ok((self, session))
-    }
-
-    async fn env_request(
-        mut self,
-        channel: ChannelId,
-        variable_name: &str,
-        variable_value: &str,
-        mut session: Session,
-    ) -> Result<(Self, Session), Self::Error> {
-        match self.requests.get_mut(&channel) {
-            Some(request) => request.push_env(variable_name, variable_value),
-            None => {
-                session.disconnect(
-                    russh::Disconnect::ProtocolError,
-                    "Reference to an unknown or closed channel.",
-                    "en",
-                );
-            }
-        }
-
-        Ok((self, session))
-    }
-
-    async fn exec_request(
-        mut self,
-        channel: ChannelId,
-        data: &[u8],
-        mut session: Session,
-    ) -> Result<(Self, Session), Self::Error> {
-        let key = self.key().fingerprint().to_string();
-
-        match self.requests.remove(&channel) {
-            Some(request) => {
-                let span = tracing::span!(
-                    tracing::Level::INFO,
-                    "service-request",
-                    %key,
-                    %channel,
-                );
-
-                if let Err(err) = request.process(data).instrument(span.clone()).await {
-                    span.in_scope(
-                        || tracing::warn!("Unable to proccess service request: {err:#}",),
-                    );
-
-                    session.disconnect(
-                        russh::Disconnect::ByApplication,
-                        "Unable to process service request.",
-                        "en",
-                    );
-                }
-            }
-            None => {
-                session.disconnect(
-                    russh::Disconnect::ProtocolError,
-                    "Reference to an unknown or closed channel.",
-                    "en",
-                );
-            }
+        let request = self.requests.remove(&channel);
+        if let Some(request) = request {
+            request.abort();
         }
 
         Ok((self, session))

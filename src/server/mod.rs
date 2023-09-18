@@ -53,7 +53,7 @@ impl Server {
             auth_rejection_time: Duration::from_secs(3),
             auth_rejection_time_initial: Some(Duration::ZERO),
             keys,
-            inactivity_timeout: Some(Duration::from_secs(3)),
+            inactivity_timeout: Some(Duration::from_secs(60)),
             ..Default::default()
         };
 

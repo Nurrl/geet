@@ -5,7 +5,7 @@ pub const DEFAULT_HEAD_REF: &str = "refs/heads/main";
 
 /// The name of the authority repository in the repository root
 /// and in repository namespaces.
-pub const AUTHORITY_REPOSITORY_NAME: &str = "~.git";
+pub const AUTHORITY_REPOSITORY_NAME: &str = "?.git";
 
 mod id;
 pub use id::Id;

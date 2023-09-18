@@ -26,10 +26,6 @@ impl Id {
         self.namespace.as_deref()
     }
 
-    pub fn repository(&self) -> &str {
-        self.repository.as_ref()
-    }
-
     /// Constructs the authority repository [`Id`]
     /// from the current `namespace`:`repository` couple.
     pub fn to_authority(&self) -> Id {
