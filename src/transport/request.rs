@@ -9,8 +9,8 @@ use tokio::task::JoinHandle;
 use tracing::Instrument;
 
 use crate::repository::{
-    authority::{self, Authority},
-    Repository,
+    authority::{Authority, Namespace, Origin},
+    Id, Repository, Type,
 };
 
 use super::{Key, Service};
@@ -101,48 +101,48 @@ impl Request {
 
         tracing::info!("Received new service request: {service:?}",);
 
-        let authority = if service.repository().as_type().is_authority() {
-            let repository = match Repository::open(&self.storage, service.repository().clone()) {
-                Ok(repository) => repository,
-                // When authority repositories are not yet existing, they're auto-created
-                Err(err) if err.code() == git2::ErrorCode::NotFound => {
-                    tracing::info!(
-                        "Initializing git bare repository '{}', as it was non-existant",
-                        service.repository()
-                    );
+        // Open the `origin` repository or create it if non-existant.
+        let origin = Repository::open(&self.storage, &Id::origin())
+            .or_else(|_| Repository::init(&self.storage, &Id::origin()))?;
 
-                    Repository::init(&self.storage, service.repository().clone())?
-                }
-                Err(err) => return Err(err).wrap_err("Failed to open git repository"),
-            };
-
-            let authority = match Authority::load(&repository) {
-                Ok(authority) => authority,
-                Err(authority::Error::Git(err)) if err.code() == git2::ErrorCode::UnbornBranch => {
-                    tracing::info!(
-                        "Initializing Authority repository '{}', as it was empty",
-                        service.repository()
-                    );
-
-                    let authority = Authority::init(repository.id().namespace(), self.key.clone());
-
-                    authority.commit(&repository, "Initialize Authority repository")?;
-
-                    authority
-                }
-                Err(err) => {
-                    return Err(err).wrap_err("Failed to load the Authority from the repository")
-                }
-            };
+        // Load the Authority or initialize it.
+        let origin = Origin::read(&origin).or_else(|_| {
+            let authority = Origin::init(self.key.clone());
 
             authority
-        } else {
-            let repository = Repository::open(&self.storage, service.repository().to_authority())?;
+                .commit(&origin, "Origin repository initialization")
+                .map(|_| authority)
+        })?;
 
-            Authority::load(&repository)?
+        let allow = match service.repository().as_type() {
+            Type::OriginAuthority(_) => origin.has_key(&self.key),
+            Type::NamespaceAuthority(id) => {
+                let namespace = match (origin.registration(), Repository::open(&self.storage, id)) {
+                    (_, Ok(repository)) => repository,
+                    (true, Err(_)) => Repository::init(&self.storage, id)?,
+                    (false, err) => err?,
+                };
+
+                let namespace = match (origin.registration(), Namespace::read(&namespace)) {
+                    (_, Ok(repository)) => repository,
+                    (true, Err(_)) => {
+                        let authority = Namespace::init(
+                            id.namespace().map(ToString::to_string),
+                            self.key.clone(),
+                        );
+                        authority.commit(&namespace, "Namespace repository initialization")?;
+
+                        authority
+                    }
+                    (false, err) => err?,
+                };
+
+                namespace.has_key(&self.key)
+            }
+            Type::Plain(_id) => unimplemented!(),
         };
 
-        if authority.is_owner(&self.key) {
+        if allow {
             match service
                 .exec(&self.envs, &self.storage, &mut self.channel)
                 .await

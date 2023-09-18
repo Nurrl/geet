@@ -14,26 +14,21 @@ pub mod authority;
 
 /// A handle to a bare repository.
 pub struct Repository {
-    repository: git2::Repository,
-    id: Id,
+    inner: git2::Repository,
 }
 
 impl Repository {
-    pub fn init(storage: &Path, id: Id) -> Result<Self, git2::Error> {
+    pub fn init(storage: &Path, id: &Id) -> Result<Self, git2::Error> {
         let repository = git2::Repository::init_bare(id.to_path(storage))?;
         repository.set_head(DEFAULT_HEAD_REF)?;
 
-        Ok(Self { repository, id })
+        Ok(Self { inner: repository })
     }
 
-    pub fn open(storage: &Path, id: Id) -> Result<Self, git2::Error> {
+    pub fn open(storage: &Path, id: &Id) -> Result<Self, git2::Error> {
         let repository = git2::Repository::open_bare(id.to_path(storage))?;
 
-        Ok(Self { repository, id })
-    }
-
-    pub fn id(&self) -> &Id {
-        &self.id
+        Ok(Self { inner: repository })
     }
 }
 
@@ -41,7 +36,7 @@ impl std::ops::Deref for Repository {
     type Target = git2::Repository;
 
     fn deref(&self) -> &Self::Target {
-        &self.repository
+        &self.inner
     }
 }
 
@@ -50,10 +45,4 @@ pub enum Type<'i> {
     OriginAuthority(&'i Id),
     NamespaceAuthority(&'i Id),
     Plain(&'i Id),
-}
-
-impl Type<'_> {
-    pub fn is_authority(&self) -> bool {
-        matches!(self, Self::OriginAuthority(_) | Self::NamespaceAuthority(_))
-    }
 }

@@ -1,11 +1,13 @@
 use std::net::IpAddr;
 
+use serde_with::{DeserializeFromStr, SerializeDisplay};
+
 mod error;
 pub use error::Error;
 
 /// A public-key representation that can come either from disk
 /// or from a [`russh_keys::key::PublicKey`].
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, SerializeDisplay, DeserializeFromStr)]
 pub struct Key(openssh_keys::PublicKey);
 
 impl Key {
@@ -20,11 +22,19 @@ impl Key {
             format!("{} {} {user}@{addr}", key.name(), key.public_key_base64()).parse()?,
         ))
     }
+}
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        Ok(Self(openssh_keys::PublicKey::parse(std::str::from_utf8(
-            bytes,
-        )?)?))
+impl std::fmt::Display for Key {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0.to_key_format())
+    }
+}
+
+impl std::str::FromStr for Key {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(openssh_keys::PublicKey::parse(s)?))
     }
 }
 
@@ -33,11 +43,5 @@ impl std::ops::Deref for Key {
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl std::fmt::Display for Key {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0.to_key_format())
     }
 }

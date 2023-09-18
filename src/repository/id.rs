@@ -34,9 +34,16 @@ impl Id {
         }
     }
 
+    pub fn origin() -> Self {
+        Self {
+            namespace: None,
+            repository: AUTHORITY_REPOSITORY_NAME.into(),
+        }
+    }
+
     /// Constructs the authority repository [`Id`]
     /// from the current `namespace`:`repository` couple.
-    pub fn to_authority(&self) -> Id {
+    pub fn to_authority(&self) -> Self {
         Self {
             namespace: self.namespace.clone(),
             repository: AUTHORITY_REPOSITORY_NAME.into(),
