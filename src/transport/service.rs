@@ -63,38 +63,46 @@ impl Service {
                 .expect("Unable to take service's `stdout` handle"),
         );
 
+        let mut done = false;
         loop {
             let mut buf = [0u8; 4096 * 8];
 
             tokio::select! {
-                Ok(n) = stdout.read(&mut buf) => {
+                read = stdout.read(&mut buf) => {
+                    let n = read?;
+
                     if n > 0 {
                         channel.data(&buf[..n]).await?;
+                    } else {
+                        done = true;
                     }
                 }
-                Some(msg) = channel.wait() => {
+                msg = channel.wait() => {
                     tracing::trace!("Received channel message: {msg:?}");
 
-                    if let ChannelMsg::Data { data } = &msg {
-                        if let Some(stdin) = &mut stdin {
-                            stdin.write_all(data).await?;
+                    match msg {
+                        Some(ChannelMsg::Data { data }) => {
+                            if let Some(stdin) = &mut stdin {
+                                stdin.write_all(&data).await?;
+                            }
                         }
-                    }
-                    if let ChannelMsg::Eof = &msg {
-                        if let Some(mut stdin) = stdin.take() {
-                            stdin.flush().await?;
+                        None | Some(ChannelMsg::Eof) => {
+                            if let Some(mut stdin) = stdin.take() {
+                                stdin.flush().await?;
 
-                            drop(stdin);
-                        }
+                                drop(stdin);
+                            }
+                        },
+                        _ => ()
                     }
                 }
-                Ok(status) = child.wait() => {
-                    break Ok(status);
-                }
-                else => {
-                    break Err(eyre::eyre!("The channel <> command pipe experienced an I/O error"));
+                // Exit the loop once everything is flushed
+                true = async { stdin.is_none() && done } => {
+                    break;
                 }
             }
         }
+
+        Ok(child.wait().await?)
     }
 }
