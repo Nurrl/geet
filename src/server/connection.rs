@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, path::PathBuf};
 
 use async_trait::async_trait;
 use color_eyre::eyre;
@@ -9,11 +9,10 @@ use russh::{
 use russh_keys::key;
 use tokio::task::JoinHandle;
 
-use super::Config;
 use crate::transport::{Key, Request};
 
 pub struct Connection {
-    config: Arc<Config>,
+    storage: PathBuf,
     addr: SocketAddr,
     key: Option<Key>,
 
@@ -21,9 +20,9 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(config: Arc<Config>, addr: SocketAddr) -> Self {
+    pub fn new(storage: PathBuf, addr: SocketAddr) -> Self {
         Self {
-            config,
+            storage,
             addr,
             key: None,
             requests: Default::default(),
@@ -134,7 +133,7 @@ impl server::Handler for Connection {
             channel.id(),
             Request::new(
                 self.key().clone(),
-                self.config.storage.clone(),
+                self.storage.clone(),
                 channel,
                 session.handle(),
             )

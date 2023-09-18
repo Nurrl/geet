@@ -2,15 +2,22 @@ use clap::Parser;
 use color_eyre::eyre::{self, Context};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-use geet::server;
+use geet::{hooks, server};
 
-mod config;
-use config::Cli;
+#[derive(Debug, Parser)]
+#[command(multicall = true, rename_all = "kebab-case")]
+pub enum Cli {
+    #[command(name = env!("CARGO_PKG_NAME"))]
+    Server(server::Server),
+
+    #[command(flatten)]
+    Hooks(hooks::Hook),
+}
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     match Cli::parse() {
-        Cli::Server(mut config) => {
+        Cli::Server(mut server) => {
             // Set-up the pretty-printed error handler
             color_eyre::install()?;
 
@@ -20,18 +27,18 @@ async fn main() -> eyre::Result<()> {
                 .with(EnvFilter::from_default_env())
                 .init();
 
-            config.storage = config
+            server.storage = server
                 .storage
                 .canonicalize()
                 .wrap_err("Error reading the storage directory")?;
 
             tracing::info!(
                 "Starting up the `geet` daemon in `{}`..",
-                config.storage.display()
+                server.storage.display()
             );
 
             // Finally configure and start the server
-            server::Server::from(config).bind().await
+            server.bind().await
         }
         Cli::Hooks(hook) => hook.run(),
     }
