@@ -23,3 +23,12 @@ where
         Self::Err(value.into())
     }
 }
+
+impl<E> From<std::io::Error> for Error<E>
+where
+    E: From<std::io::Error>,
+{
+    fn from(value: std::io::Error) -> Self {
+        Self::Err(value.into())
+    }
+}

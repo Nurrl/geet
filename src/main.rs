@@ -40,6 +40,6 @@ async fn main() -> eyre::Result<()> {
             // Finally configure and start the server
             server.bind().await
         }
-        Cli::Hooks(hook) => hook.run(),
+        Cli::Hooks(hook) => hook.run().await,
     }
 }

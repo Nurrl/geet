@@ -119,8 +119,8 @@ impl Service {
         let Output { status, stderr, .. } = child.wait_with_output().await?;
 
         if !stderr.is_empty() {
-            tracing::error!(
-                "Service errored (exit-code {}): {}",
+            tracing::warn!(
+                "Service additionnal output (code {}): {}",
                 status.code().unwrap_or(i32::MAX),
                 String::from_utf8_lossy(&stderr)
             );

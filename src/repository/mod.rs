@@ -38,6 +38,13 @@ impl Repository {
         Ok(Self { inner: repository })
     }
 
+    /// Open the repository pointed by the envs, used in hooks.
+    pub fn open_from_env() -> Result<Self, git2::Error> {
+        let repository = git2::Repository::open_from_env()?;
+
+        Ok(Self { inner: repository })
+    }
+
     /// Install server-side hooks for the repository pointed by the [`Id`] in the `storage` path.
     pub fn hook(storage: &Path, id: &Id) -> Result<(), eyre::Error> {
         // Ensure the directory exists and is a git repository

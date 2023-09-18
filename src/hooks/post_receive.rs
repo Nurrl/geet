@@ -20,7 +20,7 @@ pub struct PostReceive {
 }
 
 impl PostReceive {
-    pub fn run(self) -> Result<(), Error<eyre::Error>> {
+    pub async fn run(self) -> Result<(), Error<eyre::Error>> {
         println!("Successfully updated refs :: ✓");
 
         Ok(())

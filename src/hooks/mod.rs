@@ -5,7 +5,7 @@ mod error;
 pub use error::Error;
 
 pub mod params;
-use params::Params;
+use params::{Params, RefUpdate};
 
 mod post_receive;
 mod pre_receive;
@@ -25,11 +25,11 @@ pub enum Hook {
 }
 
 impl Hook {
-    pub fn run(self) -> ! {
+    pub async fn run(self) -> ! {
         let result = match self {
-            Hook::PreReceive(hook) => hook.run(),
-            Hook::Update(hook) => hook.run(),
-            Hook::PostReceive(hook) => hook.run(),
+            Hook::PreReceive(hook) => hook.run().await,
+            Hook::Update(hook) => hook.run().await,
+            Hook::PostReceive(hook) => hook.run().await,
         };
 
         match result {
