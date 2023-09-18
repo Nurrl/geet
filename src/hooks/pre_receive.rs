@@ -41,7 +41,7 @@ impl PreReceive {
     ) -> Result<(), Error<eyre::Error>> {
         let Params { storage, id } = &self.params;
 
-        let repository = Repository::open_from_env()?;
+        let repository = Repository::open_from_hook(storage, id)?;
         let is_head = refname.as_bytes() == repository.head()?.name_bytes();
 
         match id.as_type() {
@@ -70,7 +70,7 @@ impl PreReceive {
             Type::Plain(id) => {
                 let authority = Repository::open(storage, &id.to_authority())?;
 
-                let _repodef = if id.namespace().is_none() {
+                let def = if id.namespace().is_none() {
                     Origin::read(&authority)?
                         .repository(id)
                         .expect("The repository is not defined in it's authority repository")

@@ -1,6 +1,7 @@
 use std::{io::ErrorKind, path::Path};
 
 use color_eyre::eyre;
+use git2::RepositoryOpenFlags;
 use strum::VariantNames;
 
 use crate::hooks;
@@ -33,14 +34,27 @@ impl Repository {
 
     /// Open the repository pointed by the [`Id`] in the `storage` path.
     pub fn open(storage: &Path, id: &Id) -> Result<Self, git2::Error> {
-        let repository = git2::Repository::open_bare(id.to_path(storage))?;
+        let repository = git2::Repository::open_ext(
+            id.to_path(storage),
+            RepositoryOpenFlags::NO_SEARCH
+                | RepositoryOpenFlags::BARE
+                | RepositoryOpenFlags::NO_DOTGIT,
+            &[] as &[&std::ffi::OsStr],
+        )?;
 
         Ok(Self { inner: repository })
     }
 
     /// Open the repository pointed by the envs, used in hooks.
-    pub fn open_from_env() -> Result<Self, git2::Error> {
-        let repository = git2::Repository::open_from_env()?;
+    pub fn open_from_hook(storage: &Path, id: &Id) -> Result<Self, git2::Error> {
+        let repository = git2::Repository::open_ext(
+            id.to_path(storage),
+            RepositoryOpenFlags::NO_SEARCH
+                | RepositoryOpenFlags::BARE
+                | RepositoryOpenFlags::NO_DOTGIT
+                | RepositoryOpenFlags::FROM_ENV,
+            &[] as &[&std::ffi::OsStr],
+        )?;
 
         Ok(Self { inner: repository })
     }
