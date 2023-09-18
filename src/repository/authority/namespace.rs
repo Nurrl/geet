@@ -14,7 +14,7 @@ pub struct Namespace {
 impl Namespace {
     pub fn init(namespace: Option<String>, key: PubKey) -> Self {
         Self {
-            name: namespace.unwrap_or_else(|| ":origin:".into()),
+            name: namespace.unwrap_or_else(|| "?".into()),
             keys: vec![key],
             repositories: Default::default(),
         }

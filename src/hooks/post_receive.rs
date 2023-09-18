@@ -1,5 +1,4 @@
 use clap::Parser;
-use color_eyre::eyre;
 
 use super::{Error, Params};
 
@@ -20,8 +19,8 @@ pub struct PostReceive {
 }
 
 impl PostReceive {
-    pub async fn run(self) -> Result<(), Error<eyre::Error>> {
-        println!("Successfully updated refs :: ✓");
+    pub async fn run(self) -> Result<(), Error> {
+        println!("success: Successfully updated refs :: ✓");
 
         Ok(())
     }

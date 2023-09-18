@@ -1,7 +1,6 @@
 use std::io;
 
 use clap::Parser;
-use color_eyre::eyre::{self, WrapErr};
 use futures::{io::AllowStdIo, TryStreamExt};
 
 use super::{Error, Params, RefUpdate};
@@ -25,13 +24,13 @@ pub struct PreReceive {
 }
 
 impl PreReceive {
-    pub async fn run(&self) -> Result<(), Error<eyre::Error>> {
+    pub async fn run(&self) -> Result<(), Error> {
         RefUpdate::from_io(AllowStdIo::new(io::stdin()))
             .try_for_each(|refupdate| self.receive(refupdate))
             .await
     }
 
-    async fn receive(&self, update: RefUpdate) -> Result<(), Error<eyre::Error>> {
+    async fn receive(&self, update: RefUpdate) -> Result<(), Error> {
         let Params { storage, id } = &self.params;
 
         let repository = Repository::open_from_hook(storage, id)?;
@@ -42,53 +41,53 @@ impl PreReceive {
 
         match id.as_type() {
             Type::OriginAuthority(_) => {
-                if is_head && is_delete {
-                    return Err(Error::Err(eyre::eyre!(
-                        "Cannot delete the `{}` ref",
-                        update.refname
-                    )));
+                if is_delete {
+                    return if is_head {
+                        Err(Error::DeleteRef(update.refname))
+                    } else {
+                        // If we allow delete, don't check anything else
+                        Ok(())
+                    };
                 }
-                if is_head && !is_ff {
-                    return Err(Error::Err(eyre::eyre!(
-                        "Non fast-forward updates disabled on `{}`",
-                        update.refname
-                    )));
+                if !is_ff && is_head {
+                    return Err(Error::NoFastForward(update.refname));
                 }
 
-                match Origin::read_commit(&repository, update.newrev)
-                    .wrap_err("Authority parse failed")
+                if let Err(mut err) =
+                    Origin::read_commit(&repository, update.newrev).map_err(Error::from)
                 {
-                    // If repository's head is updated, ensure authority integrity
-                    Err(err) if is_head => Err(Error::Err(err)),
-                    // If another branch is updated, simply spit out a warning
-                    Err(err) => Err(Error::Warn(err)),
+                    if !is_head {
+                        err = Error::Hint(err.into());
+                    }
 
-                    _ => Ok(()),
+                    Err(err)
+                } else {
+                    Ok(())
                 }
             }
             Type::NamespaceAuthority(_) => {
-                if is_head && is_delete {
-                    return Err(Error::Err(eyre::eyre!(
-                        "Cannot delete the `{}` ref",
-                        update.refname
-                    )));
+                if is_delete {
+                    return if is_head {
+                        Err(Error::DeleteRef(update.refname))
+                    } else {
+                        // If we allow delete, don't check anything else
+                        Ok(())
+                    };
                 }
-                if is_head && !is_ff {
-                    return Err(Error::Err(eyre::eyre!(
-                        "Non fast-forward updates disabled on `{}`",
-                        update.refname
-                    )));
+                if !is_ff && is_head {
+                    return Err(Error::NoFastForward(update.refname));
                 }
 
-                match Namespace::read_commit(&repository, update.newrev)
-                    .wrap_err("Authority parse failed")
+                if let Err(mut err) =
+                    Namespace::read_commit(&repository, update.newrev).map_err(Error::from)
                 {
-                    // If repository's head is updated, ensure authority integrity
-                    Err(err) if is_head => Err(Error::Err(err)),
-                    // If another branch is updated, simply spit out a warning
-                    Err(err) => Err(Error::Warn(err)),
+                    if !is_head {
+                        err = Error::Hint(err.into());
+                    }
 
-                    _ => Ok(()),
+                    Err(err)
+                } else {
+                    Ok(())
                 }
             }
             Type::Plain(id) => {

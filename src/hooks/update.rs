@@ -1,5 +1,4 @@
 use clap::Parser;
-use color_eyre::eyre;
 
 use super::{Error, Params};
 
@@ -27,7 +26,7 @@ pub struct Update {
 }
 
 impl Update {
-    pub async fn run(self) -> Result<(), Error<eyre::Error>> {
+    pub async fn run(self) -> Result<(), Error> {
         Ok(())
     }
 }
