@@ -105,41 +105,41 @@ impl Request {
         tracing::info!("Received new service request: {service:?}",);
 
         // Open the `origin` repository or create it if non-existant.
-        let origin = Repository::open(&self.storage, &Id::origin())
+        let repository = Repository::open(&self.storage, &Id::origin())
             .or_else(|_| Repository::init(&self.storage, &Id::origin()))?;
 
         // Load the Authority or initialize it.
-        let origin = Origin::read(&origin).or_else(|_| {
+        let origin = Origin::read(&repository).or_else(|_| {
             let authority = Origin::init(self.key.clone());
 
             authority
-                .commit(&origin, "Origin repository initialization")
+                .commit(&repository, "Origin authority repository initialization")
                 .map(|_| authority)
         })?;
 
         let allow = match service.repository().as_type() {
             Type::OriginAuthority(_) => origin.has_key(&self.key),
             Type::NamespaceAuthority(id) => {
-                let namespace = match (origin.registration(), Repository::open(&self.storage, id)) {
-                    (_, Ok(repository)) => repository,
-                    // Auto-init the repository if registrations are enabled
-                    (true, Err(_)) => Repository::init(&self.storage, id)?,
-                    (false, err) => err?,
-                };
+                let namespace = if origin.registration()
+                    || (!origin.registration() && origin.has_key(&self.key))
+                {
+                    // Auto-create and initialize the namespace authority repository if:
+                    // - The auto-registration is enabled
+                    // - The auto-registration is disabled, but the user is owner on the origin repository
 
-                let namespace = match (origin.registration(), Namespace::read(&namespace)) {
-                    (_, Ok(repository)) => repository,
-                    // Auto-init the repository if registrations are enabled
-                    (true, Err(_)) => {
-                        let authority = Namespace::init(
-                            id.namespace().map(ToString::to_string),
-                            self.key.clone(),
-                        );
-                        authority.commit(&namespace, "Namespace repository initialization")?;
+                    let repository = Repository::open(&self.storage, id)
+                        .or_else(|_| Repository::init(&self.storage, id))?;
+
+                    Namespace::read(&repository).or_else(|_| {
+                        let authority =
+                            Namespace::init(id.namespace().map(Into::into), self.key.clone());
 
                         authority
-                    }
-                    (false, err) => err?,
+                            .commit(&repository, "Namespace authority repository initialization")
+                            .map(|_| authority)
+                    })?
+                } else {
+                    Namespace::read(&Repository::open(&self.storage, id)?)?
                 };
 
                 namespace.has_key(&self.key)
