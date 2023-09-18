@@ -9,7 +9,7 @@ pub const DEFAULT_HEAD_REF: &str = "refs/heads/main";
 
 /// The name of the authority repository in the repository root
 /// and in repository namespaces.
-pub const AUTHORITY_REPOSITORY_NAME: &str = "?.git";
+pub const AUTHORITY_REPOSITORY_NAME: id::Name = id::Name(id::Base(std::borrow::Cow::Borrowed("?")));
 
 pub mod id;
 pub use id::Id;

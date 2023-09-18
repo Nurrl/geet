@@ -142,8 +142,7 @@ impl Tunnel {
                         .or_else(|_| Repository::init(&self.storage, id))?;
 
                     Namespace::read(&repository).or_else(|_| {
-                        let authority =
-                            Namespace::init(id.namespace().map(Into::into), self.key.clone());
+                        let authority = Namespace::init(self.key.clone());
 
                         authority
                             .commit(&repository, "Namespace authority repository initialization")

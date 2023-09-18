@@ -16,7 +16,7 @@ pub struct Origin {
 impl Origin {
     pub fn init(key: PubKey) -> Self {
         Self {
-            namespace: Namespace::init(None, key),
+            namespace: Namespace::init(key),
             registration: Default::default(),
         }
     }

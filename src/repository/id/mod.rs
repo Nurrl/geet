@@ -1,26 +1,28 @@
 //! Repository identifier parsing, handling and validation primitives.
 
 use std::{
-    borrow::Cow,
-    ffi::OsStr,
     path::{self, Path, PathBuf},
     str::FromStr,
 };
 
-use color_eyre::eyre;
-
 use super::AUTHORITY_REPOSITORY_NAME;
 
-/// The standard extension for git repositories.
-const REPOSITORY_NAME_EXT: &str = ".git";
+mod error;
+pub use error::Error;
+
+mod name;
+pub use name::{Name, REPOSITORY_NAME_EXT};
+
+mod base;
+pub use base::Base;
 
 /// A repository [`Id`] is defined as a path without a leading `/`
 /// that does not contain any other component than [`path::Component::Normal`]
-/// and has a maximum of two components, the last one ending with `.git`.
-#[derive(Debug, Clone, PartialEq)]
+/// that are parsed as a [`Base`] and a [`Name`].
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Id {
-    namespace: Option<String>,
-    repository: String,
+    namespace: Option<Base>,
+    repository: Name,
 }
 
 impl Id {
@@ -28,14 +30,18 @@ impl Id {
         self.namespace.as_deref()
     }
 
-    pub fn repository(&self) -> &str {
+    pub fn repository(&self) -> &Name {
         &self.repository
     }
 
+    pub fn is_authority(&self) -> bool {
+        self.repository == AUTHORITY_REPOSITORY_NAME
+    }
+
     pub fn as_type(&self) -> Type<'_> {
-        match (&self.namespace, self.repository.as_str()) {
-            (None, AUTHORITY_REPOSITORY_NAME) => Type::OriginAuthority(self),
-            (Some(_), AUTHORITY_REPOSITORY_NAME) => Type::NamespaceAuthority(self),
+        match &self.namespace {
+            None if self.is_authority() => Type::OriginAuthority(self),
+            Some(_) if self.is_authority() => Type::NamespaceAuthority(self),
             _ => Type::Plain(self),
         }
     }
@@ -43,7 +49,7 @@ impl Id {
     pub fn origin() -> Self {
         Self {
             namespace: None,
-            repository: AUTHORITY_REPOSITORY_NAME.into(),
+            repository: AUTHORITY_REPOSITORY_NAME,
         }
     }
 
@@ -52,7 +58,7 @@ impl Id {
     pub fn to_authority(&self) -> Self {
         Self {
             namespace: self.namespace.clone(),
-            repository: AUTHORITY_REPOSITORY_NAME.into(),
+            repository: AUTHORITY_REPOSITORY_NAME,
         }
     }
 
@@ -63,7 +69,7 @@ impl Id {
 }
 
 impl FromStr for Id {
-    type Err = eyre::Error;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // Encapsulate in a path and strip any leading `/`
@@ -73,21 +79,13 @@ impl FromStr for Id {
         let components: Vec<_> = path.components().collect();
 
         let (namespace, repository) = match components[..] {
-            // Enforce the `.git` extension in repository names
-            _ if path.extension() != Some(REPOSITORY_NAME_EXT[1..].as_ref()) => {
-                return Err(eyre::eyre!(
-                    "The repository name must end with the `.git` extension"
-                ))
-            }
-            [path::Component::Normal(repository)] => (None, repository),
-            [path::Component::Normal(namespace), path::Component::Normal(repository)] => {
-                (Some(namespace), repository)
-            }
-            _ => return Err(eyre::eyre!("The repository path is misformatted")),
+            [path::Component::Normal(repository)] => (None, repository.to_str().unwrap().parse()?),
+            [path::Component::Normal(namespace), path::Component::Normal(repository)] => (
+                Some(namespace.to_str().unwrap().parse()?),
+                repository.to_str().unwrap().parse()?,
+            ),
+            _ => Err(Error::MisformattedPath)?,
         };
-
-        let namespace = namespace.map(OsStr::to_string_lossy).map(Cow::into_owned);
-        let repository = repository.to_string_lossy().into_owned();
 
         Ok(Self {
             namespace,
@@ -109,7 +107,7 @@ impl std::fmt::Display for Id {
             f.write_str(namespace)?;
             f.write_str(std::path::MAIN_SEPARATOR_STR)?;
         }
-        f.write_str(&self.repository)
+        write!(f, "{}", &self.repository)
     }
 }
 
@@ -121,25 +119,13 @@ mod tests {
 
     #[rstest]
     #[case("/user/repo.git",
-        Id { namespace: Some("user".into()), repository: "repo.git".into() })]
+        Id { namespace: Some(Base("user".into())), repository: Name(Base("repo".into())) })]
     #[case("user/repo.git",
-        Id { namespace: Some("user".into()), repository: "repo.git".into() })]
+        Id { namespace: Some(Base("user".into())), repository: Name(Base("repo".into())) })]
     #[case("//user/repo.git",
-        Id { namespace: Some("user".into()), repository: "repo.git".into() })]
-    #[case("/~weirduser/repo.git",
-        Id { namespace: Some("~weirduser".into()), repository: "repo.git".into() })]
-    #[case("/user/~weirdrepo.git",
-        Id { namespace: Some("user".into()), repository: "~weirdrepo.git".into() })]
-    #[case("..git",
-        Id { namespace: None, repository: "..git".into() })]
-    #[case("~/repo.git",
-        Id { namespace: Some("~".into()), repository: "repo.git".into() })]
-    #[case("/~/repo.git",
-        Id { namespace: Some("~".into()), repository: "repo.git".into() })]
-    #[case("/./repo.git",
-        Id { namespace: None, repository: "repo.git".into() })]
-    #[case(AUTHORITY_REPOSITORY_NAME,
-            Id { namespace: None, repository: AUTHORITY_REPOSITORY_NAME.into() })]
+        Id { namespace: Some(Base("user".into())), repository: Name(Base("repo".into())) })]
+    #[case("?.git",
+            Id { namespace: None, repository: Name(Base("?".into())) })]
     fn it_allows_valid_repositories(#[case] path: &str, #[case] expected: Id) {
         let path = Id::from_str(path).expect(path);
 
@@ -157,6 +143,10 @@ mod tests {
     #[case("user/../repo.git")]
     #[case("/user/repo")]
     #[case("/repo")]
+    #[case("..git")]
+    #[case("toto/..git")]
+    #[case(".toto.git")]
+    #[case("toto..git")]
     fn it_denies_sketchy_repositories(#[case] path: &str) {
         let _ = Id::from_str(path).unwrap_err();
     }

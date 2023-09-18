@@ -1,20 +1,23 @@
+use std::ops::Deref;
+
 use serde::{Deserialize, Serialize};
 
 use super::Authority;
-use crate::{repository::Id, transport::PubKey};
+use crate::{
+    repository::{id::Base, Id},
+    transport::PubKey,
+};
 
 /// An [`Authority`] residing in a _non-root_ namespace.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Namespace {
-    name: String,
     keys: Vec<PubKey>,
     repositories: Vec<RepositoryDef>,
 }
 
 impl Namespace {
-    pub fn init(namespace: Option<String>, key: PubKey) -> Self {
+    pub fn init(key: PubKey) -> Self {
         Self {
-            name: namespace.unwrap_or_else(|| "?".into()),
             keys: vec![key],
             repositories: Default::default(),
         }
@@ -25,16 +28,9 @@ impl Namespace {
     }
 
     pub fn repository(&self, id: &Id) -> Option<&RepositoryDef> {
-        self.repositories.iter().find(|repo| {
-            repo.name
-                .as_str()
-                .strip_suffix(".git")
-                .unwrap_or(&repo.name)
-                == id
-                    .repository()
-                    .strip_suffix(".git")
-                    .unwrap_or(id.repository())
-        })
+        self.repositories
+            .iter()
+            .find(|repo| &repo.name == id.repository().deref())
     }
 }
 
@@ -44,7 +40,7 @@ impl Authority for Namespace {}
 /// and some technical configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RepositoryDef {
-    name: String,
+    name: Base,
     description: Option<String>,
     license: Option<String>,
     visibility: Visibility,
