@@ -29,6 +29,13 @@ impl Service {
         }
     }
 
+    pub fn access(&self) -> ServiceAccess {
+        match self {
+            Service::GitUploadPack { .. } => ServiceAccess::Read,
+            Service::GitReceivePack { .. } => ServiceAccess::Write,
+        }
+    }
+
     pub async fn exec(
         &self,
         envs: impl IntoIterator<Item = (impl AsRef<OsStr>, impl AsRef<OsStr>)>,
@@ -118,4 +125,11 @@ impl Service {
 
         Ok(status)
     }
+}
+
+/// A definition of what access the services requires to perform it's action.
+#[derive(Debug, PartialEq)]
+pub enum ServiceAccess {
+    Read,
+    Write,
 }

@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use color_eyre::eyre;
 use russh::{MethodSet, SshId};
-use russh_keys::key::KeyPair;
+use russh_keys::key::{KeyPair, SignatureHash};
 
 use crate::config;
 
@@ -30,11 +30,16 @@ impl Server {
                 .map(|path| russh_keys::load_secret_key(path, None))
                 .collect::<Result<Vec<_>, russh_keys::Error>>()?,
             None => {
-                tracing::warn!("The server has been started without a keypair, a random one will be generated, this is unsafe for production !");
+                tracing::warn!("The server has been started without a keypair, random ones will be generated, this is unsafe for production !");
 
-                vec![KeyPair::generate_ed25519().ok_or(eyre::eyre!(
-                    "Unable to generate a random keypair for the server"
-                ))?]
+                vec![
+                    KeyPair::generate_ed25519().ok_or(eyre::eyre!(
+                        "Unable to generate an ed25519 keypair for the server"
+                    ))?,
+                    KeyPair::generate_rsa(4096, SignatureHash::SHA2_512).ok_or(eyre::eyre!(
+                        "Unable to generate a rsa keypair for the server"
+                    ))?,
+                ]
             }
         };
 

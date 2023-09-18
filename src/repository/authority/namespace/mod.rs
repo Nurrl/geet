@@ -1,33 +1,13 @@
 use serde::{Deserialize, Serialize};
 
 use super::Authority;
-use crate::transport::Key;
+use crate::{repository::Id, transport::Key};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Namespace {
     name: String,
     keys: Vec<Key>,
     repositories: Vec<Repository>,
-}
-
-/// The configuration for a repository, with some metadata
-/// and some technical configuration.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Repository {
-    name: String,
-    description: Option<String>,
-    license: Option<String>,
-    visibility: Visibility,
-    head: Option<String>,
-}
-
-/// Repository visibility level to a non-owner user.
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Visibility {
-    /// Everyone can clone this repository.
-    Public,
-    /// Only repo owner can clone this repository.
-    Private,
 }
 
 impl Namespace {
@@ -42,6 +22,47 @@ impl Namespace {
     pub fn has_key(&self, key: &Key) -> bool {
         self.keys.iter().any(|k| k == key)
     }
+
+    pub fn repository(&self, id: &Id) -> Option<&Repository> {
+        self.repositories.iter().find(|repo| {
+            repo.name
+                .as_str()
+                .strip_suffix(".git")
+                .unwrap_or(&repo.name)
+                == id
+                    .repository()
+                    .strip_suffix(".git")
+                    .unwrap_or(id.repository())
+        })
+    }
 }
 
 impl Authority for Namespace {}
+
+/// The configuration for a repository, with some metadata
+/// and some technical configuration.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Repository {
+    name: String,
+    description: Option<String>,
+    license: Option<String>,
+    visibility: Visibility,
+}
+
+impl Repository {
+    pub fn visibility(&self) -> &Visibility {
+        &self.visibility
+    }
+}
+
+/// Repository visibility level to a non-owner user.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Visibility {
+    /// Only repo owner can clone this repository.
+    Private,
+    /// Everyone can clone this repository.
+    Public,
+    /// Everyone can clone this repository, and the repository is read-only.
+    Archive,
+}

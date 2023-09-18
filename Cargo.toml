@@ -19,8 +19,8 @@ tracing-subscriber = { version = "0.3.17", features = [
 ] }
 
 git2 = { version = "0.18.0", default-features = false }
-russh = "0.38.0"
-russh-keys = "0.38.0"
+russh = { version = "0.38.0", features = ["openssl"] }
+russh-keys = { version = "0.38.0", features = ["openssl"] }
 openssh-keys = "0.6.2"
 
 parse-display = "0.8.2"

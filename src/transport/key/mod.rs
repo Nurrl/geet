@@ -18,8 +18,13 @@ impl Key {
     ) -> openssh_keys::errors::Result<Self> {
         use russh_keys::PublicKeyBase64;
 
+        let name = match key.name() {
+            "rsa-sha2-256" | "rsa-sha2-512" => "ssh-rsa",
+            name => name,
+        };
+
         Ok(Self(
-            format!("{} {} {user}@{addr}", key.name(), key.public_key_base64()).parse()?,
+            format!("{} {} {user}@{addr}", name, key.public_key_base64()).parse()?,
         ))
     }
 }

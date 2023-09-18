@@ -26,6 +26,10 @@ impl Id {
         self.namespace.as_deref()
     }
 
+    pub fn repository(&self) -> &str {
+        &self.repository
+    }
+
     pub fn as_type(&self) -> Type<'_> {
         match (&self.namespace, self.repository.as_str()) {
             (None, AUTHORITY_REPOSITORY_NAME) => Type::OriginAuthority(self),

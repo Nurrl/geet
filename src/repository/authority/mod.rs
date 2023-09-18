@@ -9,7 +9,7 @@ mod error;
 pub use error::Error;
 
 mod namespace;
-pub use namespace::Namespace;
+pub use namespace::{Namespace, Visibility};
 
 mod origin;
 pub use origin::Origin;

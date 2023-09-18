@@ -1,3 +1,5 @@
+#![feature(result_option_inspect)]
+
 use color_eyre::eyre::{self, Context};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 

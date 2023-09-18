@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use color_eyre::eyre;
 use russh::{
     server::{self, Auth, Msg, Response, Session},
-    Channel, ChannelId,
+    Channel, ChannelId, MethodSet,
 };
 use russh_keys::key;
 use tokio::task::JoinHandle;
@@ -55,7 +55,7 @@ impl server::Handler for Connection {
         );
 
         let auth = Auth::Reject {
-            proceed_with_methods: None,
+            proceed_with_methods: Some(MethodSet::PUBLICKEY),
         };
 
         Ok((self, auth))
@@ -86,7 +86,10 @@ impl server::Handler for Connection {
         );
 
         // Save the client key for further authentication later
-        self.key = Some(Key::from_russh(public_key, user, &self.addr.ip())?);
+        self.key = Some(
+            Key::from_russh(public_key, user, &self.addr.ip())
+                .inspect_err(|err| tracing::error!("Unable to parse client's public-key: {err}"))?,
+        );
 
         Ok((self, Auth::Accept))
     }

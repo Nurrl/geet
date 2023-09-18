@@ -8,9 +8,12 @@ use russh::{
 use tokio::task::JoinHandle;
 use tracing::Instrument;
 
-use crate::repository::{
-    authority::{Authority, Namespace, Origin},
-    Id, Repository, Type,
+use crate::{
+    repository::{
+        authority::{Authority, Namespace, Origin, Visibility},
+        Id, Repository, Type,
+    },
+    transport::service::ServiceAccess,
 };
 
 use super::{Key, Service};
@@ -119,12 +122,14 @@ impl Request {
             Type::NamespaceAuthority(id) => {
                 let namespace = match (origin.registration(), Repository::open(&self.storage, id)) {
                     (_, Ok(repository)) => repository,
+                    // Auto-init the repository if registrations are enabled
                     (true, Err(_)) => Repository::init(&self.storage, id)?,
                     (false, err) => err?,
                 };
 
                 let namespace = match (origin.registration(), Namespace::read(&namespace)) {
                     (_, Ok(repository)) => repository,
+                    // Auto-init the repository if registrations are enabled
                     (true, Err(_)) => {
                         let authority = Namespace::init(
                             id.namespace().map(ToString::to_string),
@@ -139,7 +144,30 @@ impl Request {
 
                 namespace.has_key(&self.key)
             }
-            Type::Plain(_id) => unimplemented!(),
+            Type::Plain(id) => {
+                let authority =
+                    Namespace::read(&Repository::open(&self.storage, &id.to_authority())?)?;
+
+                let def = authority
+                    .repository(id)
+                    .ok_or_else(|| eyre::eyre!("Missing repository definition for `{id}`"))?;
+
+                let allow = match def.visibility() {
+                    Visibility::Private => authority.has_key(&self.key),
+                    Visibility::Public => {
+                        service.access() == ServiceAccess::Read || authority.has_key(&self.key)
+                    }
+                    Visibility::Archive => service.access() == ServiceAccess::Read,
+                };
+
+                if allow {
+                    // Create the repository if non-existant
+                    Repository::open(&self.storage, id)
+                        .or_else(|_| Repository::init(&self.storage, id))?;
+                }
+
+                allow
+            }
         };
 
         if allow {
