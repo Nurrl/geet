@@ -1,14 +1,11 @@
-use std::{collections::HashMap, path::PathBuf, process::Stdio};
+use std::{collections::HashMap, path::PathBuf};
 
 use color_eyre::eyre::{self, WrapErr};
 use russh::{
     server::{Handle, Msg},
     Channel, ChannelMsg,
 };
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    task::JoinHandle,
-};
+use tokio::task::JoinHandle;
 use tracing::Instrument;
 
 use crate::repository::{
@@ -38,46 +35,48 @@ impl Request {
     }
 
     pub fn spawn(mut self) -> JoinHandle<()> {
-        tokio::spawn(async move {
-            loop {
-                match self.channel.wait().await {
-                    Some(ChannelMsg::SetEnv {
-                        variable_name,
-                        variable_value,
-                        ..
-                    }) => self.set_env(variable_name, variable_value),
-                    Some(ChannelMsg::Exec { command, .. }) => {
-                        let span = tracing::span!(
-                            tracing::Level::INFO,
-                            "service-request",
-                            key = %self.key,
-                            channel = %self.channel.id(),
-                        );
+        let span = tracing::span!(
+            tracing::Level::INFO,
+            "service-request",
+            key = %self.key,
+            channel = %self.channel.id(),
+        );
 
-                        if let Err(err) = self.exec(command).instrument(span.clone()).await {
-                            span.in_scope(|| {
+        tokio::spawn(
+            async move {
+                loop {
+                    match self.channel.wait().await {
+                        Some(ChannelMsg::SetEnv {
+                            variable_name,
+                            variable_value,
+                            ..
+                        }) => self.set_env(variable_name, variable_value).await,
+                        Some(ChannelMsg::Exec { command, .. }) => {
+                            if let Err(err) = self.exec(command).await {
                                 tracing::warn!("Unable to proccess service request: {err:#}",)
-                            });
+                            }
+
+                            break;
                         }
-
-                        self.channel.close().await.expect("Unable to close channel");
-
-                        break;
+                        Some(msg) => tracing::trace!(
+                            "Received an unhandled message on channel@{}: {:?}",
+                            self.channel.id(),
+                            msg
+                        ),
+                        None => break,
                     }
-                    Some(msg) => tracing::trace!(
-                        "Received an unhandled message on channel@{}: {:?}",
-                        self.channel.id(),
-                        msg
-                    ),
-                    None => break,
                 }
+
+                // Finally close the SSH channel
+                self.channel.close().await.expect("Unable to close channel");
             }
-        })
+            .instrument(span),
+        )
     }
 
     /// Push a new environment variable to the service request,
     /// the environment will only be saved if deemed safe and necessary.
-    fn set_env(&mut self, name: String, value: String) {
+    async fn set_env(&mut self, name: String, value: String) {
         match name.as_str() {
             // Restrict the environment variables to theses
             "GIT_PROTOCOL" => {
@@ -87,11 +86,13 @@ impl Request {
             }
             _ => tracing::trace!("Ignored illegal environment variable `{name}={value}`"),
         }
+
+        let _ = self.session.channel_success(self.channel.id()).await;
     }
 
     /// Process the service request from the requested service
     /// and the acquired context.
-    pub async fn exec(&mut self, command: Vec<u8>) -> eyre::Result<()> {
+    async fn exec(&mut self, command: Vec<u8>) -> eyre::Result<()> {
         let service: Service = String::from_utf8(command)
             .wrap_err("Received a non-utf8 service request")?
             .parse()
@@ -99,7 +100,7 @@ impl Request {
 
         tracing::info!("Received new service request: {service:?}",);
 
-        let authority = if service.repository().is_authority() {
+        let authority = if service.repository().as_type().is_authority() {
             let repository = match Repository::open(&self.storage, service.repository().clone()) {
                 Ok(repository) => repository,
                 // When authority repositories are not yet existing, they're auto-created
@@ -141,66 +142,25 @@ impl Request {
         };
 
         if authority.is_owner(&self.key) {
-            let mut child = tokio::process::Command::new(service.command())
-                .envs(&self.envs)
-                .arg("--strict")
-                .arg("--timeout=1")
-                .arg(service.repository().to_path(&self.storage))
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::null())
-                .kill_on_drop(true)
-                .spawn()?;
+            match service
+                .exec(&self.envs, &self.storage, &mut self.channel)
+                .await
+            {
+                Ok(status) => {
+                    let _ = self.session.channel_success(self.channel.id()).await;
+                    let _ = self
+                        .session
+                        .exit_status_request(self.channel.id(), status.code().unwrap_or(1) as u32)
+                        .await;
 
-            let (mut stdin, mut stdout) = (
-                child.stdin.take(),
-                child
-                    .stdout
-                    .take()
-                    .expect("Unable to take service's `stdout` handle"),
-            );
+                    Ok(())
+                }
+                Err(err) => {
+                    let _ = self.session.channel_failure(self.channel.id()).await;
 
-            let mut buf = vec![0u8; 4096];
-            loop {
-                tokio::select! {
-                    Ok(n) = stdout.read(&mut buf) => {
-                        if n > 0 {
-                            self.channel.data(&buf[..n]).await?;
-                        }
-                    }
-                    Some(msg) = self.channel.wait() => {
-                        tracing::trace!("Received SSH channel message: {msg:?}");
-
-                        if let ChannelMsg::Data { data } = &msg {
-                            if let Some(stdin) = &mut stdin {
-                                stdin.write_all(data).await?;
-                            }
-                        }
-                        if let ChannelMsg::Eof = &msg {
-                            if let Some(stdin) = &mut stdin {
-                                stdin.flush().await?;
-                            }
-                            drop(stdin.take());
-                        }
-                    }
-                    Ok(status) = child.wait() => {
-                        let _ = self.session.channel_success(self.channel.id()).await;
-                        let _ = self
-                            .session
-                            .exit_status_request(self.channel.id(), status.code().unwrap_or(1) as u32)
-                            .await;
-
-                        break;
-                    }
-                    else => {
-                        let _ = self.session.channel_failure(self.channel.id()).await;
-
-                        break;
-                    }
+                    Err(err).wrap_err("Service request transfer failed")
                 }
             }
-
-            Ok(())
         } else {
             let _ = self.session.channel_failure(self.channel.id()).await;
 

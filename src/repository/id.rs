@@ -7,7 +7,7 @@ use std::{
 
 use color_eyre::eyre;
 
-use super::AUTHORITY_REPOSITORY_NAME;
+use super::{Type, AUTHORITY_REPOSITORY_NAME};
 
 /// The standard extension for git repositories.
 const REPOSITORY_NAME_EXT: &str = ".git";
@@ -26,6 +26,14 @@ impl Id {
         self.namespace.as_deref()
     }
 
+    pub fn as_type(&self) -> Type<'_> {
+        match (&self.namespace, self.repository.as_str()) {
+            (None, AUTHORITY_REPOSITORY_NAME) => Type::OriginAuthority(self),
+            (Some(_), AUTHORITY_REPOSITORY_NAME) => Type::NamespaceAuthority(self),
+            _ => Type::Plain(self),
+        }
+    }
+
     /// Constructs the authority repository [`Id`]
     /// from the current `namespace`:`repository` couple.
     pub fn to_authority(&self) -> Id {
@@ -33,11 +41,6 @@ impl Id {
             namespace: self.namespace.clone(),
             repository: AUTHORITY_REPOSITORY_NAME.into(),
         }
-    }
-
-    /// Checks if the current [`Id`] is the authority's repository path.
-    pub fn is_authority(&self) -> bool {
-        self.repository == AUTHORITY_REPOSITORY_NAME
     }
 
     /// Converts the current [`Id`] to a [`PathBuf`], in the `sotrage` path.

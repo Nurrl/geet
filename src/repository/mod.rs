@@ -44,3 +44,16 @@ impl std::ops::Deref for Repository {
         &self.repository
     }
 }
+
+/// The repository type regarding it's [`Id`].
+pub enum Type<'i> {
+    OriginAuthority(&'i Id),
+    NamespaceAuthority(&'i Id),
+    Plain(&'i Id),
+}
+
+impl Type<'_> {
+    pub fn is_authority(&self) -> bool {
+        matches!(self, Self::OriginAuthority(_) | Self::NamespaceAuthority(_))
+    }
+}
