@@ -9,7 +9,7 @@ use tokio::task::JoinHandle;
 use tracing::Instrument;
 
 use crate::{
-    hooks,
+    hooks::{self, Hook},
     repository::{
         authority::{Authority, Namespace, Origin, Visibility},
         id::Type,
@@ -174,7 +174,7 @@ impl Request {
 
         if allow {
             // Install our server-side hooks
-            Repository::hook(&self.storage, service.repository())?;
+            Hook::install(&self.storage, service.repository())?;
             self.envs.insert(
                 hooks::params::STORAGE_PATH_ENV.into(),
                 self.storage.to_string_lossy().into(),

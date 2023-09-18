@@ -31,7 +31,7 @@ impl PreReceive {
             .await
     }
 
-    pub async fn receive(
+    async fn receive(
         &self,
         RefUpdate {
             oldrev: _,
