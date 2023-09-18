@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::transport::Key;
+use crate::transport::PubKey;
 
 use super::{namespace::Namespace, Authority};
 
@@ -14,7 +14,7 @@ pub struct Origin {
 }
 
 impl Origin {
-    pub fn init(key: Key) -> Self {
+    pub fn init(key: PubKey) -> Self {
         Self {
             namespace: Namespace::init(None, key),
             registration: Default::default(),

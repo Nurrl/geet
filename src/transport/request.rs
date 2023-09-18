@@ -18,10 +18,10 @@ use crate::{
     transport::service::ServiceAccess,
 };
 
-use super::{Key, Service};
+use super::{PubKey, Service};
 
 pub struct Request {
-    key: Key,
+    key: PubKey,
     storage: PathBuf,
     channel: Channel<Msg>,
     session: Handle,
@@ -29,7 +29,7 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn new(key: Key, storage: PathBuf, channel: Channel<Msg>, session: Handle) -> Self {
+    pub fn new(key: PubKey, storage: PathBuf, channel: Channel<Msg>, session: Handle) -> Self {
         Self {
             key,
             storage,

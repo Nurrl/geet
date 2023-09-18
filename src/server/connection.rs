@@ -9,12 +9,12 @@ use russh::{
 use russh_keys::key;
 use tokio::task::JoinHandle;
 
-use crate::transport::{Key, Request};
+use crate::transport::{PubKey, Request};
 
 pub struct Connection {
     storage: PathBuf,
     addr: SocketAddr,
-    key: Option<Key>,
+    key: Option<PubKey>,
 
     requests: HashMap<ChannelId, JoinHandle<()>>,
 }
@@ -34,7 +34,7 @@ impl Connection {
     /// # Panics
     ///
     /// This will panic if called before the authentication procedure.
-    pub fn key(&self) -> &Key {
+    pub fn key(&self) -> &PubKey {
         self.key
             .as_ref()
             .expect("Public key missing from connection context.")
@@ -84,7 +84,7 @@ impl server::Handler for Connection {
 
         // Save the client key for further authentication later
         self.key = Some(
-            Key::from_russh(public_key, user, &self.addr.ip())
+            PubKey::from_russh(public_key, user, &self.addr.ip())
                 .inspect_err(|err| tracing::error!("Unable to parse client's public-key: {err}"))?,
         );
 

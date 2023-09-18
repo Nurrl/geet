@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::transport::key;
+use crate::transport::pkey;
 
 #[cfg(doc)]
 use super::Authority;
@@ -16,5 +16,5 @@ pub enum Error {
     Yaml(#[from] serde_yaml::Error),
 
     #[error("Key error: {0}")]
-    Key(#[from] key::Error),
+    Key(#[from] pkey::Error),
 }

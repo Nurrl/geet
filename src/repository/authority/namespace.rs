@@ -1,17 +1,17 @@
 use serde::{Deserialize, Serialize};
 
 use super::Authority;
-use crate::{repository::Id, transport::Key};
+use crate::{repository::Id, transport::PubKey};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Namespace {
     name: String,
-    keys: Vec<Key>,
+    keys: Vec<PubKey>,
     repositories: Vec<RepositoryDef>,
 }
 
 impl Namespace {
-    pub fn init(namespace: Option<String>, key: Key) -> Self {
+    pub fn init(namespace: Option<String>, key: PubKey) -> Self {
         Self {
             name: namespace.unwrap_or_else(|| ":origin:".into()),
             keys: vec![key],
@@ -19,7 +19,7 @@ impl Namespace {
         }
     }
 
-    pub fn has_key(&self, key: &Key) -> bool {
+    pub fn has_key(&self, key: &PubKey) -> bool {
         self.keys.iter().any(|k| k == key)
     }
 
