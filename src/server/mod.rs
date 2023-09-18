@@ -11,11 +11,11 @@ pub use connection::Connection;
 
 #[derive(Debug)]
 pub struct Server {
-    config: Arc<config::Config>,
+    config: Arc<config::ServerConfig>,
 }
 
-impl From<config::Config> for Server {
-    fn from(value: config::Config) -> Self {
+impl From<config::ServerConfig> for Server {
+    fn from(value: config::ServerConfig) -> Self {
         Self {
             config: value.into(),
         }
@@ -24,12 +24,12 @@ impl From<config::Config> for Server {
 
 impl Server {
     pub async fn bind(self) -> eyre::Result<()> {
-        let keys = match self.config.keys {
-            Some(ref keys) => keys
+        let keys = match &self.config.keypair {
+            keypairs if !keypairs.is_empty() => keypairs
                 .iter()
                 .map(|path| russh_keys::load_secret_key(path, None))
                 .collect::<Result<Vec<_>, russh_keys::Error>>()?,
-            None => {
+            _ => {
                 tracing::warn!("The server has been started without a keypair, random ones will be generated, this is unsafe for production !");
 
                 vec![
@@ -62,7 +62,7 @@ impl Server {
             ..Default::default()
         };
 
-        russh::server::run(config.into(), self.config.address, self)
+        russh::server::run(config.into(), self.config.clone().bind.as_slice(), self)
             .await
             .map_err(Into::into)
     }

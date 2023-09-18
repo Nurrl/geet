@@ -1,9 +1,12 @@
 #![feature(result_option_inspect)]
 
-use color_eyre::eyre::{self, Context};
+use clap::Parser;
+use color_eyre::eyre;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 mod config;
+use config::Cli;
+
 mod repository;
 mod server;
 mod transport;
@@ -19,16 +22,16 @@ async fn main() -> eyre::Result<()> {
         .with(EnvFilter::from_default_env())
         .init();
 
-    let file =
-        std::fs::File::open("./geet.yaml").wrap_err("failed to open the configuration file")?;
-    let config: config::Config =
-        serde_yaml::from_reader(file).wrap_err("failed to parse the configuration file")?;
+    match Cli::parse() {
+        Cli::Server(config) => {
+            tracing::info!(
+                "Starting up the `geet` daemon in `{}`..",
+                config.storage.to_str().unwrap_or("<non-unicode>")
+            );
 
-    tracing::info!(
-        "Starting up the `geet` daemon in `{}`..",
-        config.storage.to_str().unwrap_or("<non-unicode>")
-    );
-
-    // Finally configure and start the server
-    server::Server::from(config).bind().await
+            // Finally configure and start the server
+            server::Server::from(config).bind().await
+        }
+        _ => todo!("The server-side hooks are not implemented yet"),
+    }
 }

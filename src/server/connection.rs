@@ -10,12 +10,12 @@ use russh_keys::key;
 use tokio::task::JoinHandle;
 
 use crate::{
-    config::Config,
+    config::ServerConfig,
     transport::{Key, Request},
 };
 
 pub struct Connection {
-    config: Arc<Config>,
+    config: Arc<ServerConfig>,
     addr: SocketAddr,
     key: Option<Key>,
 
@@ -23,7 +23,7 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(config: Arc<Config>, addr: SocketAddr) -> Self {
+    pub fn new(config: Arc<ServerConfig>, addr: SocketAddr) -> Self {
         Self {
             config,
             addr,

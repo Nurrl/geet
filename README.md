@@ -1,2 +1,2 @@
 # geet
-A git-configured git server supporting ssh.
+A lightweight, self-configured, ssh git remote.
