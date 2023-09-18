@@ -1,6 +1,7 @@
 use std::{io::ErrorKind, path::Path};
 
 use color_eyre::eyre;
+use strum::VariantNames;
 
 use crate::hooks;
 
@@ -45,7 +46,7 @@ impl Repository {
         let program = std::env::args().next().expect("The env contains no arg0");
         let hookdir = id.to_path(storage).join("hooks");
 
-        for hook in hooks::HOOKS {
+        for hook in hooks::Hook::VARIANTS {
             let link = hookdir.join(hook);
 
             match std::fs::read_link(&link) {

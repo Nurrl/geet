@@ -33,7 +33,7 @@ async fn main() -> eyre::Result<()> {
             // Finally configure and start the server
             server::Server::from(config).bind().await
         }
-        Cli::Hook(hook) => {
+        Cli::Hooks(hook) => {
             if let Err(err) = hook.run() {
                 // When hooks exit, send back the error to the client
                 print!("error: {err}");

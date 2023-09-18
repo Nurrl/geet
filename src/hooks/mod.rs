@@ -1,8 +1,6 @@
 use clap::Parser;
 use color_eyre::eyre;
-
-/// The list of available server hooks.
-pub const HOOKS: &[&str] = &["pre-receive", "update", "post-receive"];
+use strum::EnumVariantNames;
 
 pub mod params;
 use params::Params;
@@ -11,7 +9,9 @@ mod post_receive;
 mod pre_receive;
 mod update;
 
-#[derive(Debug, Parser)]
+#[derive(Debug, Parser, EnumVariantNames)]
+#[command(rename_all = "kebab-case")]
+#[strum(serialize_all = "kebab-case")]
 pub enum Hook {
     /// Execute as a git `pre-receive` hook.
     PreReceive(pre_receive::PreReceive),

@@ -2,6 +2,7 @@ use std::{net::SocketAddr, path::PathBuf};
 
 use clap::Parser;
 
+/// A lightweight, self-configured, ssh git remote.
 #[derive(Debug, Parser)]
 #[command(author, version, about, rename_all = "kebab-case")]
 pub struct Config {

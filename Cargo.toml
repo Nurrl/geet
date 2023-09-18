@@ -10,6 +10,7 @@ async-trait = "0.1.73"
 futures = "0.3.28"
 tokio = { version = "1.32.0", features = ["rt-multi-thread", "macros"] }
 
+clap = { version = "4.4.2", features = ["derive", "env"] }
 thiserror = "1.0.48"
 color-eyre = "0.6.2"
 tracing = "0.1.37"
@@ -17,13 +18,13 @@ tracing-subscriber = { version = "0.3.17", features = [
     "env-filter",
     "tracing-log",
 ] }
-clap = { version = "4.4.2", features = ["derive", "env"] }
 
 git2 = { version = "0.18.0", default-features = false }
 russh = { version = "0.38.0", features = ["openssl"] }
 russh-keys = { version = "0.38.0", features = ["openssl"] }
 openssh-keys = "0.6.2"
 
+strum = { version = "0.25.0", features = ["derive"] }
 parse-display = "0.8.2"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_yaml = "0.9.25"
