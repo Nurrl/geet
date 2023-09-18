@@ -38,7 +38,7 @@ impl Request {
 
     /// Process the service request from the requested service
     /// and the acquired context.
-    pub fn process(&self, data: &[u8]) -> eyre::Result<()> {
+    pub async fn process(&mut self, data: &[u8]) -> eyre::Result<()> {
         let service: Service = String::from_utf8(data.to_vec())
             .inspect_err(|err| {
                 tracing::warn!(

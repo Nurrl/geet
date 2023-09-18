@@ -1,0 +1,4 @@
+---
+address: 0.0.0.0:2222
+storage: ./target/repositories
+banner: "Hello from geet !\n"

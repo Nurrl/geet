@@ -20,3 +20,5 @@ tracing-subscriber = { version = "0.3.17", features = [
 russh = "0.38.0"
 russh-keys = "0.38.0"
 parse-display = "0.8.2"
+serde = { version = "1.0.188", features = ["derive"] }
+serde_yaml = "0.9.25"

@@ -167,23 +167,20 @@ impl server::Handler for Connection {
     }
 
     async fn exec_request(
-        self,
+        mut self,
         channel: ChannelId,
         data: &[u8],
         mut session: Session,
     ) -> Result<(Self, Session), Self::Error> {
-        match self
-            .requests
-            .get(&channel)
-            .map(|request| request.process(data))
-        {
-            Some(Ok(_)) => (),
-            Some(Err(_)) => {
-                session.disconnect(
-                    russh::Disconnect::ByApplication,
-                    "Unable to process service request.",
-                    "en",
-                );
+        match self.requests.get_mut(&channel) {
+            Some(request) => {
+                if request.process(data).await.is_err() {
+                    session.disconnect(
+                        russh::Disconnect::ByApplication,
+                        "Unable to process service request.",
+                        "en",
+                    );
+                }
             }
             None => {
                 session.disconnect(
