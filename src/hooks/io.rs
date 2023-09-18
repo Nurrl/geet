@@ -5,9 +5,10 @@ use std::{fmt::Display, path::PathBuf, str::FromStr};
 use clap::Parser;
 use color_eyre::eyre;
 use futures::{io::BufReader, AsyncBufReadExt, AsyncRead, Stream, TryStreamExt};
+use git2::Oid;
 use parse_display::{Display, FromStr};
 
-use crate::repository::{authority, Id};
+use crate::repository::{authority, Id, Repository};
 
 /// The name of the environment variable used to pass the repository id to the hooks.
 pub const REPOSITORY_ID_ENV: &str = "REPOSITORY_ID";
@@ -29,8 +30,8 @@ pub struct Params {
 #[derive(FromStr, Display)]
 #[display("{oldrev} {newrev} {refname}")]
 pub struct RefUpdate {
-    pub oldrev: String,
-    pub newrev: String,
+    pub oldrev: Oid,
+    pub newrev: Oid,
     pub refname: String,
 }
 
@@ -44,6 +45,28 @@ impl RefUpdate {
                     .map_err(Into::into)
                     .map_err(Error::Err)
             })
+    }
+
+    pub fn is_ff(&self, repository: &Repository) -> Result<bool, Error<eyre::Error>> {
+        match (self.oldrev.is_zero(), self.newrev.is_zero()) {
+            (true, _) => Ok(true),
+            (_, true) => Ok(false),
+            _ => repository
+                .graph_descendant_of(self.newrev, self.oldrev)
+                .map_err(Into::into),
+        }
+    }
+
+    pub fn is_head(&self, repository: &Repository) -> Result<bool, Error<eyre::Error>> {
+        Ok(self.refname
+            == repository
+                .find_reference("HEAD")?
+                .symbolic_target()
+                .expect("HEAD is not a symbolic reference"))
+    }
+
+    pub fn is_delete(&self) -> bool {
+        !self.oldrev.is_zero() && self.newrev.is_zero()
     }
 }
 

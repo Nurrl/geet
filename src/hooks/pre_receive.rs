@@ -25,32 +25,39 @@ pub struct PreReceive {
 }
 
 impl PreReceive {
-    pub async fn run(self) -> Result<(), Error<eyre::Error>> {
+    pub async fn run(&self) -> Result<(), Error<eyre::Error>> {
         RefUpdate::from_io(AllowStdIo::new(io::stdin()))
             .try_for_each(|refupdate| self.receive(refupdate))
             .await
     }
 
-    async fn receive(
-        &self,
-        RefUpdate {
-            oldrev: _,
-            newrev,
-            refname,
-        }: RefUpdate,
-    ) -> Result<(), Error<eyre::Error>> {
+    async fn receive(&self, update: RefUpdate) -> Result<(), Error<eyre::Error>> {
         let Params { storage, id } = &self.params;
 
         let repository = Repository::open_from_hook(storage, id)?;
-        let is_head = refname
-            == repository
-                .find_reference("HEAD")?
-                .symbolic_target()
-                .expect("HEAD is not a symbolic reference");
+
+        let is_ff = update.is_ff(&repository)?;
+        let is_head = update.is_head(&repository)?;
+        let is_delete = update.is_delete();
 
         match id.as_type() {
             Type::OriginAuthority(_) => {
-                match Origin::read_commit(&repository, &newrev).wrap_err("Authority parse failed") {
+                if is_head && is_delete {
+                    return Err(Error::Err(eyre::eyre!(
+                        "Cannot delete the `{}` ref",
+                        update.refname
+                    )));
+                }
+                if is_head && !is_ff {
+                    return Err(Error::Err(eyre::eyre!(
+                        "Non fast-forward updates disabled on `{}`",
+                        update.refname
+                    )));
+                }
+
+                match Origin::read_commit(&repository, update.newrev)
+                    .wrap_err("Authority parse failed")
+                {
                     // If repository's head is updated, ensure authority integrity
                     Err(err) if is_head => Err(Error::Err(err)),
                     // If another branch is updated, simply spit out a warning
@@ -60,7 +67,20 @@ impl PreReceive {
                 }
             }
             Type::NamespaceAuthority(_) => {
-                match Namespace::read_commit(&repository, &newrev)
+                if is_head && is_delete {
+                    return Err(Error::Err(eyre::eyre!(
+                        "Cannot delete the `{}` ref",
+                        update.refname
+                    )));
+                }
+                if is_head && !is_ff {
+                    return Err(Error::Err(eyre::eyre!(
+                        "Non fast-forward updates disabled on `{}`",
+                        update.refname
+                    )));
+                }
+
+                match Namespace::read_commit(&repository, update.newrev)
                     .wrap_err("Authority parse failed")
                 {
                     // If repository's head is updated, ensure authority integrity

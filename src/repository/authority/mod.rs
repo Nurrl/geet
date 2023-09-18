@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use git2::FileMode;
+use git2::{FileMode, Oid};
 use serde::{de::DeserializeOwned, Serialize};
 
 use super::Repository;
@@ -40,8 +40,8 @@ pub trait Authority: Serialize + DeserializeOwned {
     }
 
     /// Read the [`Authority`] from the provided `commit` in the repository.
-    fn read_commit(repository: &Repository, hash: &str) -> Result<Self, Error> {
-        let head = repository.find_commit(git2::Oid::from_str(hash)?)?;
+    fn read_commit(repository: &Repository, oid: Oid) -> Result<Self, Error> {
+        let head = repository.find_commit(oid)?;
         let tree = head.tree()?;
 
         Ok(serde_yaml::from_slice(
