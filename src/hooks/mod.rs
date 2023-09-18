@@ -1,4 +1,6 @@
-use std::{collections::HashMap, io, path::Path};
+//! Types and structs related to _server-side git hooks_.
+
+use std::{collections::HashMap, path::Path};
 
 use clap::Parser;
 use color_eyre::eyre;
@@ -6,11 +8,8 @@ use strum::{EnumVariantNames, VariantNames};
 
 use crate::repository::Id;
 
-mod error;
-pub use error::Error;
-
-pub mod params;
-use params::{Params, RefUpdate};
+pub mod io;
+use io::{Error, Params, RefUpdate};
 
 mod post_receive;
 mod pre_receive;
@@ -30,7 +29,7 @@ pub enum Hooks {
 }
 
 impl Hooks {
-    /// Execute the [`Hook`] and exit accordingly.
+    /// Execute the [`Hooks`] and exit accordingly.
     pub async fn run(self) -> ! {
         let result = match self {
             Hooks::PreReceive(hook) => hook.run().await,
@@ -38,24 +37,8 @@ impl Hooks {
             Hooks::PostReceive(hook) => hook.run().await,
         };
 
-        match result {
-            Err(Error::Err(err)) => {
-                print!("error: {err}");
-                if let Some(source) = err.source() {
-                    print!(": {source}");
-                }
-                println!();
-
-                std::process::exit(1);
-            }
-            Err(Error::Warn(err)) => {
-                print!("warning: {err}");
-                if let Some(source) = err.source() {
-                    print!(": {source}");
-                }
-                println!();
-            }
-            Ok(_) => (),
+        if let Err(err) = result {
+            err.acknowledge();
         }
 
         std::process::exit(0);
@@ -75,7 +58,7 @@ impl Hooks {
 
                     std::fs::remove_file(&link)?
                 }
-                Err(err) if err.kind() == io::ErrorKind::NotFound => (),
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => (),
                 Err(err) => return Err(err.into()),
                 _ => continue,
             }
@@ -90,9 +73,9 @@ impl Hooks {
 
     pub fn env(envs: &mut HashMap<String, String>, storage: &Path, id: &Id) {
         envs.insert(
-            params::STORAGE_PATH_ENV.into(),
+            io::STORAGE_PATH_ENV.into(),
             storage.to_string_lossy().into(),
         );
-        envs.insert(params::REPOSITORY_ID_ENV.into(), id.to_string());
+        envs.insert(io::REPOSITORY_ID_ENV.into(), id.to_string());
     }
 }
