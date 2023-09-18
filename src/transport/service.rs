@@ -1,10 +1,19 @@
-use std::path::PathBuf;
-
 use parse_display::FromStr;
 
+use crate::repository;
+
 #[derive(Debug, FromStr)]
-#[display("{} '{repository}'", style = "kebab-case")]
+#[display("{} '{path}'", style = "kebab-case")]
 pub enum Service {
-    GitUploadPack { repository: PathBuf },
-    GitReceivePack { repository: PathBuf },
+    GitUploadPack { path: repository::Path },
+    GitReceivePack { path: repository::Path },
+}
+
+impl Service {
+    pub fn path(&self) -> &repository::Path {
+        match self {
+            Service::GitUploadPack { path } => path,
+            Service::GitReceivePack { path } => path,
+        }
+    }
 }

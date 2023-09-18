@@ -62,6 +62,11 @@ impl Request {
             self.channel.id()
         );
 
+        tracing::info!(
+            "Calculated service authority repository path being `{:?}`.",
+            service.path().to_authority_path()
+        );
+
         Ok(())
     }
 }

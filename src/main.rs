@@ -4,6 +4,7 @@ use color_eyre::eyre::{self, Context};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 mod config;
+mod repository;
 mod server;
 mod transport;
 
