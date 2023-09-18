@@ -83,10 +83,6 @@ impl Tunnel {
                         None => break,
                     }
                 }
-
-                if let Err(err) = self.channel.close().await {
-                    tracing::error!("Unable to close channel@{}: {err:#}", self.channel.id());
-                }
             }
             .instrument(span),
         )
@@ -111,10 +107,11 @@ impl Tunnel {
     /// Process the service request from the requested service
     /// and the acquired context.
     async fn exec(&mut self, command: Vec<u8>) -> eyre::Result<()> {
-        let service: Service = String::from_utf8(command)
-            .wrap_err("Received a non-utf8 service request")?
+        let command = String::from_utf8(command).wrap_err("Received a non-utf8 service request")?;
+        let service: Service = command
             .parse()
-            .wrap_err("Received an illegal service request")?;
+            .wrap_err("Received an illegal service request")
+            .wrap_err(command)?;
 
         tracing::info!("Received new service request: {service}",);
 
@@ -193,15 +190,16 @@ impl Tunnel {
             self.gitconfig.env(&mut self.envs);
 
             // Execute the git service
+            let id = self.channel.id();
             match service
                 .exec(&self.envs, &self.storage, &mut self.channel)
                 .await
             {
                 Ok(status) => {
-                    let _ = self.session.channel_success(self.channel.id()).await;
+                    let _ = self.session.channel_success(id).await;
                     let _ = self
                         .session
-                        .exit_status_request(self.channel.id(), status.code().unwrap_or(1) as u32)
+                        .exit_status_request(id, status.code().unwrap_or(1) as u32)
                         .await;
 
                     tracing::info!("Service request completed: {service}, {status}");
@@ -209,7 +207,7 @@ impl Tunnel {
                     Ok(())
                 }
                 Err(err) => {
-                    let _ = self.session.channel_failure(self.channel.id()).await;
+                    let _ = self.session.channel_failure(id).await;
 
                     Err(err).wrap_err("Service request transfer failed")
                 }
@@ -219,5 +217,18 @@ impl Tunnel {
 
             Err(eyre::eyre!("Unauthorized access to the repository"))
         }
+    }
+}
+
+impl Drop for Tunnel {
+    fn drop(&mut self) {
+        futures::executor::block_on(async {
+            if let Err(err) = self.channel.close().await {
+                tracing::error!(
+                    "Failed to automatically close channel #{}: {err}",
+                    self.channel.id()
+                );
+            }
+        });
     }
 }

@@ -21,7 +21,7 @@ pub struct Connection {
     addr: SocketAddr,
     key: Option<PubKey>,
 
-    requests: HashMap<ChannelId, JoinHandle<()>>,
+    tunnels: HashMap<ChannelId, JoinHandle<()>>,
 }
 
 impl Connection {
@@ -31,7 +31,7 @@ impl Connection {
             gitconfig,
             addr,
             key: None,
-            requests: Default::default(),
+            tunnels: Default::default(),
         }
     }
 
@@ -130,12 +130,12 @@ impl server::Handler for Connection {
         session: Session,
     ) -> Result<(Self, bool, Session), Self::Error> {
         tracing::info!(
-            "Opening channel@{} for `{}`",
+            "Opening channel #{} for `{}`",
             channel.id(),
             self.key().fingerprint()
         );
 
-        self.requests.insert(
+        self.tunnels.insert(
             channel.id(),
             Tunnel::new(
                 self.server.storage.to_path_buf(),
@@ -156,15 +156,27 @@ impl server::Handler for Connection {
         session: Session,
     ) -> Result<(Self, Session), Self::Error> {
         tracing::info!(
-            "Closed channel@{channel} for `{}`",
+            "Closed channel #{channel} for `{}`",
             self.key().fingerprint()
         );
 
-        let request = self.requests.remove(&channel);
-        if let Some(request) = request {
-            request.abort();
+        let tunnel = self.tunnels.remove(&channel);
+        if let Some(tunnel) = tunnel {
+            tunnel.abort();
         }
 
         Ok((self, session))
+    }
+}
+
+impl Drop for Connection {
+    fn drop(&mut self) {
+        tracing::trace!(
+            "Dropping connection for {}, aborting {} tunnels",
+            self.addr,
+            self.tunnels.len()
+        );
+
+        self.tunnels.values().for_each(JoinHandle::abort);
     }
 }
