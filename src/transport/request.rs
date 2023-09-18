@@ -1,13 +1,16 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, process::Stdio, time::Duration};
 
 use color_eyre::eyre::{self, WrapErr};
-use russh::{server::Msg, Channel};
+use russh::{server::Msg, Channel, ChannelMsg};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use crate::repository::{Authority, Repository};
+use crate::repository::{
+    authority::{self, Authority},
+    Repository,
+};
 
 use super::{Key, Service};
 
-#[derive(Debug)]
 pub struct Request {
     key: Key,
     storage: PathBuf,
@@ -41,7 +44,7 @@ impl Request {
 
     /// Process the service request from the requested service
     /// and the acquired context.
-    pub async fn process(&mut self, data: &[u8]) -> eyre::Result<()> {
+    pub async fn process(mut self, data: &[u8]) -> eyre::Result<()> {
         let service: Service = String::from_utf8(data.to_vec())
             .wrap_err("Received a non-utf8 service request")?
             .parse()
@@ -49,7 +52,7 @@ impl Request {
 
         tracing::info!("Received new service request: {service:?}",);
 
-        if service.repository().is_authority() {
+        let authority = if service.repository().is_authority() {
             let repository = match Repository::open(&self.storage, service.repository().clone()) {
                 Ok(repository) => repository,
                 // When authority repositories are not yet existing, they're auto-created
@@ -66,7 +69,7 @@ impl Request {
 
             let authority = match Authority::load(&repository) {
                 Ok(authority) => authority,
-                Err(err) if err.code() == git2::ErrorCode::UnbornBranch => {
+                Err(authority::Error::Git(err)) if err.code() == git2::ErrorCode::UnbornBranch => {
                     tracing::info!(
                         "Initializing Authority repository '{}', as it was empty",
                         service.repository()
@@ -83,11 +86,36 @@ impl Request {
                 }
             };
 
-            tracing::info!("{authority:?}");
+            authority
         } else {
-            unimplemented!("Non-authority repositories not yet implemented.")
-        }
+            let repository = Repository::open(&self.storage, service.repository().to_authority())?;
 
-        Ok(())
+            Authority::load(&repository)?
+        };
+
+        if authority.is_owner(&self.key) {
+            let mut child = tokio::process::Command::new(service.command())
+                .envs(&self.envs)
+                .arg(service.repository().to_path(&self.storage))
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .kill_on_drop(true)
+                .spawn()?;
+
+            let (mut stdin, mut stdout) = (
+                child
+                    .stdin
+                    .take()
+                    .ok_or_else(|| eyre::eyre!("Service `stdin` stream unavailable"))?,
+                child
+                    .stdout
+                    .take()
+                    .ok_or_else(|| eyre::eyre!("Service `stdout` stream unavailable"))?,
+            );
+
+            Ok(())
+        } else {
+            Err(eyre::eyre!("Unauthorized access to the repository"))
+        }
     }
 }

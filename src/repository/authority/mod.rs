@@ -1,10 +1,12 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::Path};
 
-use color_eyre::eyre;
-
-use crate::transport::Key;
+use git2::FileMode;
 
 use super::Repository;
+use crate::transport::Key;
+
+mod error;
+pub use error::Error;
 
 mod namespace;
 pub use namespace::NamespaceDef;
@@ -12,7 +14,9 @@ pub use namespace::NamespaceDef;
 mod repository;
 pub use repository::{RepositoryDef, Visibility};
 
-pub const DEFAULT_KEY_PATH: &str = "default.pub";
+pub const META_CONF_PATH: &str = "meta.yaml";
+pub const KEYS_PATH: &str = "keys";
+pub const REPOSITORIES_PATH: &str = "repositories";
 
 /// A structure analogue to an _authority_ repository,
 /// it's a special kind of repository hosting the servers's
@@ -22,9 +26,9 @@ pub struct Authority {
     /// The namespace's meta configuration, `/meta.yaml`.
     meta: NamespaceDef,
     /// The public keys allowed to write to this namespace, `/keys/*.pub`.
-    keys: HashMap<PathBuf, Key>,
+    keys: HashMap<Vec<u8>, Key>,
     /// The repositories defined in the namespace, `/repositories/*.yaml`.
-    repositories: HashMap<PathBuf, RepositoryDef>,
+    repositories: HashMap<Vec<u8>, RepositoryDef>,
 }
 
 impl Authority {
@@ -34,58 +38,107 @@ impl Authority {
                 namespace.map(Into::into).unwrap_or_else(|| "/".into()),
                 None,
             ),
-            keys: [(DEFAULT_KEY_PATH.into(), key)].into_iter().collect(),
+            keys: [("default.pub".into(), key)].into_iter().collect(),
             repositories: Default::default(),
         }
     }
 
-    pub fn load(repository: &Repository) -> Result<Self, git2::Error> {
+    pub fn is_owner(&self, key: &Key) -> bool {
+        self.keys.values().any(|k| k == key)
+    }
+
+    fn signature() -> Result<git2::Signature<'static>, Error> {
+        git2::Signature::now("geet", "git@geet").map_err(Into::into)
+    }
+
+    pub fn load(repository: &Repository) -> Result<Self, Error> {
         let head = repository.head()?.peel_to_commit()?;
         let tree = head.tree()?;
 
-        tracing::error!("{tree:?}");
+        let meta = serde_yaml::from_slice(
+            tree.get_path(Path::new(META_CONF_PATH))?
+                .to_object(repository)?
+                .peel_to_blob()?
+                .content(),
+        )?;
 
-        unimplemented!()
+        let directory = tree
+            .get_path(Path::new(KEYS_PATH))?
+            .to_object(repository)?
+            .peel_to_tree()?;
+        let keys = directory
+            .into_iter()
+            .map(|entry| {
+                Ok((
+                    entry.name_bytes().to_vec(),
+                    Key::from_bytes(entry.to_object(repository)?.peel_to_blob()?.content())?,
+                ))
+            })
+            .collect::<Result<_, Error>>()?;
+
+        let directory = tree
+            .get_path(Path::new(REPOSITORIES_PATH))?
+            .to_object(repository)?
+            .peel_to_tree()?;
+        let repositories = directory
+            .into_iter()
+            .map(|entry| {
+                Ok((
+                    entry.name_bytes().to_vec(),
+                    serde_yaml::from_slice(entry.to_object(repository)?.peel_to_blob()?.content())?,
+                ))
+            })
+            .collect::<Result<_, Error>>()?;
+
+        Ok(Self {
+            meta,
+            keys,
+            repositories,
+        })
     }
 
-    fn signature() -> Result<git2::Signature<'static>, git2::Error> {
-        git2::Signature::now("geet", "git@geet")
-    }
-
-    pub fn commit(&self, repository: &Repository, message: &str) -> eyre::Result<()> {
-        let meta = serde_yaml::to_string(&self.meta)?;
+    pub fn commit(&self, repository: &Repository, message: &str) -> Result<(), Error> {
+        let meta = repository.blob(serde_yaml::to_string(&self.meta)?.as_bytes())?;
         let keys = self
             .keys
             .iter()
-            .map(|(path, key)| (path, key.to_key_format()))
-            .collect::<HashMap<_, _>>();
+            .map(|(path, key)| {
+                repository
+                    .blob(key.to_string().as_bytes())
+                    .map(|blob| (path, blob))
+            })
+            .collect::<Result<HashMap<_, _>, _>>()?;
         let repositories = self
             .repositories
             .iter()
-            .map(|(path, repo)| serde_yaml::to_string(repo).map(|repo| (path, repo)))
+            .map(|(path, repo)| {
+                serde_yaml::to_string(repo)
+                    .map_err(Error::from)
+                    .and_then(|repo| repository.blob(repo.as_bytes()).map_err(Into::into))
+                    .map(|repo| (path, repo))
+            })
             .collect::<Result<HashMap<_, _>, _>>()?;
 
-        let meta = repository.blob(meta.as_bytes())?;
-        let keys = keys
-            .into_iter()
-            .map(|(path, key)| repository.blob(key.as_bytes()).map(|blob| (path, blob)))
-            .collect::<Result<HashMap<_, _>, _>>()?;
-        let repositories = repositories
-            .into_iter()
-            .map(|(path, repo)| repository.blob(repo.as_bytes()).map(|blob| (path, blob)))
-            .collect::<Result<HashMap<_, _>, _>>()?;
+        let tree = {
+            let mut root = repository.treebuilder(None)?;
 
-        let mut treebuilder = repository.treebuilder(None)?;
+            root.insert(META_CONF_PATH, meta, FileMode::Blob.into())?;
 
-        treebuilder.insert("meta.yaml", meta, 0o100644)?;
-        for (path, key) in keys {
-            treebuilder.insert(path, key, 0o100644)?;
-        }
-        for (path, repo) in repositories {
-            treebuilder.insert(path, repo, 0o100644)?;
-        }
+            let mut directory = repository.treebuilder(None)?;
+            for (path, key) in keys {
+                directory.insert(path, key, FileMode::Blob.into())?;
+            }
+            root.insert(KEYS_PATH, directory.write()?, FileMode::Tree.into())?;
 
-        let tree = repository.find_tree(treebuilder.write()?)?;
+            let mut directory = repository.treebuilder(None)?;
+            for (path, repo) in repositories {
+                directory.insert(path, repo, FileMode::Blob.into())?;
+            }
+            root.insert(REPOSITORIES_PATH, directory.write()?, FileMode::Tree.into())?;
+
+            repository.find_tree(root.write()?)?
+        };
+
         repository.commit(
             Some("HEAD"),
             &Self::signature()?,

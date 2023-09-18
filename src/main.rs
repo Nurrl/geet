@@ -1,5 +1,3 @@
-#![feature(result_option_inspect)] // see https://github.com/rust-lang/rust/issues/91345.
-
 use color_eyre::eyre::{self, Context};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
@@ -8,7 +6,7 @@ mod repository;
 mod server;
 mod transport;
 
-#[tokio::main(flavor = "multi_thread")]
+#[tokio::main]
 async fn main() -> eyre::Result<()> {
     // Set-up the pretty-printed error handler
     color_eyre::install()?;

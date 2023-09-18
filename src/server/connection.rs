@@ -14,7 +14,6 @@ use crate::{
     transport::{Key, Request},
 };
 
-#[derive(Debug)]
 pub struct Connection {
     config: Arc<Config>,
     addr: SocketAddr,
@@ -182,7 +181,7 @@ impl server::Handler for Connection {
     ) -> Result<(Self, Session), Self::Error> {
         let key = self.key().fingerprint().to_string();
 
-        match self.requests.get_mut(&channel) {
+        match self.requests.remove(&channel) {
             Some(request) => {
                 let span = tracing::span!(
                     tracing::Level::INFO,

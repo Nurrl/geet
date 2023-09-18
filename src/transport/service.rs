@@ -16,4 +16,11 @@ impl Service {
             Service::GitReceivePack { repository } => repository,
         }
     }
+
+    pub fn command(&self) -> &'static str {
+        match self {
+            Self::GitUploadPack { .. } => "git-upload-pack",
+            Self::GitReceivePack { .. } => "git-receive-pack",
+        }
+    }
 }

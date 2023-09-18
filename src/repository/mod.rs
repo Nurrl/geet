@@ -11,7 +11,6 @@ mod id;
 pub use id::Id;
 
 pub mod authority;
-pub use authority::Authority;
 
 /// A handle to a bare repository.
 pub struct Repository {
