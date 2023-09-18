@@ -20,8 +20,12 @@ tracing-subscriber = { version = "0.3.17", features = [
 ] }
 
 git2 = { version = "0.18.0", default-features = false }
-russh = { version = "0.38.0", features = ["openssl"] }
-russh-keys = { version = "0.38.0", features = ["openssl"] }
+russh = { version = "0.38.0", features = [
+    "openssl",
+], git = "https://github.com/Nurrl/russh.git", branch = "feature/channel-into-io-part" }
+russh-keys = { version = "0.38.0", features = [
+    "openssl",
+], git = "https://github.com/Nurrl/russh.git", branch = "feature/channel-into-io-part" }
 openssh-keys = "0.6.2"
 
 strum = { version = "0.25.0", features = ["derive"] }

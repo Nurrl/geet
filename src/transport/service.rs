@@ -6,11 +6,8 @@ use std::{
 
 use color_eyre::eyre;
 use parse_display::{Display, FromStr};
-use russh::{server::Msg, Channel, ChannelMsg};
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    process::Command,
-};
+use russh::{server::Msg, Channel};
+use tokio::process::Command;
 
 use crate::repository;
 
@@ -70,56 +67,32 @@ impl Service {
                 .spawn()?,
         };
 
-        let (mut stdin, mut stdout) = (
-            child.stdin.take(),
+        let (mut stdout, mut stdin) = (
             child
                 .stdout
                 .take()
                 .expect("Unable to take service's `stdout` handle"),
+            child
+                .stdin
+                .take()
+                .expect("Unable to take service's `stdin` handle"),
         );
+        let (mut tx, mut rx) = channel.into_io_parts();
 
-        let mut done = false;
-        loop {
-            let mut buf = [0u8; 4096 * 8];
+        tokio::try_join!(
+            async move {
+                let res = tokio::io::copy(&mut rx, &mut stdin).await;
+                drop(stdin);
 
-            tokio::select! {
-                read = stdout.read(&mut buf) => {
-                    let n = read?;
+                res
+            },
+            async move {
+                let res = tokio::io::copy(&mut stdout, &mut tx).await;
+                drop(tx);
 
-                    if n > 0 {
-                        channel.data(&buf[..n]).await?;
-                    } else {
-                        done = true;
-                    }
-                }
-                msg = channel.wait() => {
-                    tracing::trace!("Received channel message: {msg:?}");
-
-                    match msg {
-                        Some(ChannelMsg::Data { data }) => {
-                            if let Some(stdin) = &mut stdin {
-                                stdin.write_all(&data).await?;
-                            }
-                        }
-                        None | Some(ChannelMsg::Eof) => {
-                            if let Some(mut stdin) = stdin.take() {
-                                stdin.flush().await?;
-
-                                drop(stdin);
-                            }
-                        },
-                        _ => ()
-                    }
-                }
-                _ = child.wait() => {
-                    drop(stdin.take());
-                }
-                // Exit the loop once everything is flushed
-                true = async { stdin.is_none() && done } => {
-                    break;
-                }
-            }
-        }
+                res
+            },
+        )?;
 
         let Output { status, stderr, .. } = child.wait_with_output().await?;
 
