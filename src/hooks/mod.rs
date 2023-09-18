@@ -1,5 +1,4 @@
 use clap::Parser;
-use color_eyre::eyre;
 use strum::EnumVariantNames;
 
 mod error;
@@ -26,11 +25,33 @@ pub enum Hook {
 }
 
 impl Hook {
-    pub fn run(self) -> Result<(), Error<eyre::Error>> {
-        match self {
+    pub fn run(self) -> ! {
+        let result = match self {
             Hook::PreReceive(hook) => hook.run(),
             Hook::Update(hook) => hook.run(),
             Hook::PostReceive(hook) => hook.run(),
+        };
+
+        match result {
+            Err(Error::Err(err)) => {
+                print!("error: {err}");
+                if let Some(source) = err.source() {
+                    print!(": {source}");
+                }
+                println!();
+
+                std::process::exit(1);
+            }
+            Err(Error::Warn(err)) => {
+                print!("warning: {err}");
+                if let Some(source) = err.source() {
+                    print!(": {source}");
+                }
+                println!();
+            }
+            Ok(_) => (),
         }
+
+        std::process::exit(0);
     }
 }

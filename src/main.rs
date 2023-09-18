@@ -2,7 +2,7 @@ use clap::Parser;
 use color_eyre::eyre::{self, Context};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-use geet::{hooks, server};
+use geet::server;
 
 mod config;
 use config::Cli;
@@ -33,28 +33,6 @@ async fn main() -> eyre::Result<()> {
             // Finally configure and start the server
             server::Server::from(config).bind().await
         }
-        Cli::Hooks(hook) => {
-            match hook.run() {
-                Err(hooks::Error::Err(err)) => {
-                    print!("error: {err}");
-                    if let Some(source) = err.source() {
-                        print!(": {source}");
-                    }
-                    println!();
-
-                    std::process::exit(1);
-                }
-                Err(hooks::Error::Warn(err)) => {
-                    print!("warning: {err}");
-                    if let Some(source) = err.source() {
-                        print!(": {source}");
-                    }
-                    println!();
-                }
-                Ok(_) => (),
-            }
-
-            Ok(())
-        }
+        Cli::Hooks(hook) => hook.run(),
     }
 }
