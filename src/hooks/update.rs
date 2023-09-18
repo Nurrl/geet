@@ -1,7 +1,7 @@
 use clap::Parser;
 use color_eyre::eyre::{self, WrapErr};
 
-use super::Params;
+use super::{Error, Params};
 use crate::repository::{
     authority::{Authority, Namespace, Origin},
     id::Type,
@@ -32,7 +32,7 @@ pub struct Update {
 }
 
 impl Update {
-    pub fn run(self) -> eyre::Result<()> {
+    pub fn run(self) -> Result<(), Error<eyre::Error>> {
         let Params { storage, id } = self.params;
 
         let repository = Repository::open(&storage, &id)?;
@@ -40,22 +40,26 @@ impl Update {
 
         match id.as_type() {
             Type::OriginAuthority(_) => {
-                // If repository's head is updated, ensure authority integrity
-                if is_head {
-                    Origin::read_commit(&repository, &self.after)
-                        .wrap_err("Authority update failed")?;
+                match Origin::read_commit(&repository, &self.after)
+                    .wrap_err("Authority update failed")
+                {
+                    Ok(_) => Ok(()),
+                    // If repository's head is updated, ensure authority integrity
+                    Err(err) if is_head => Err(Error::Err(err)),
+                    // If another branch is updated, simply spit out a warning
+                    Err(err) => Err(Error::Warn(err)),
                 }
-
-                Ok(())
             }
             Type::NamespaceAuthority(_) => {
-                // If repository's head is updated, ensure authority integrity
-                if is_head {
-                    Namespace::read_commit(&repository, &self.after)
-                        .wrap_err("Authority update failed")?;
+                match Namespace::read_commit(&repository, &self.after)
+                    .wrap_err("Authority update failed")
+                {
+                    Ok(_) => Ok(()),
+                    // If repository's head is updated, ensure authority integrity
+                    Err(err) if is_head => Err(Error::Err(err)),
+                    // If another branch is updated, simply spit out a warning
+                    Err(err) => Err(Error::Warn(err)),
                 }
-
-                Ok(())
             }
             Type::Plain(id) => {
                 let authority = Repository::open(&storage, &id.to_authority())?;
@@ -73,8 +77,6 @@ impl Update {
                 };
 
                 todo!("Perform reference checks");
-
-                Ok(())
             }
         }
     }

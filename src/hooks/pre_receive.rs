@@ -1,6 +1,8 @@
 use clap::Parser;
 use color_eyre::eyre;
 
+use super::{Error, Params};
+
 /// The first script to run when handling a push from a client is pre-receive.
 /// It takes a list of references that are being pushed from stdin;
 /// if it exits non-zero, none of them are accepted.
@@ -11,11 +13,11 @@ use color_eyre::eyre;
 #[derive(Debug, Parser)]
 pub struct PreReceive {
     #[command(flatten)]
-    params: super::Params,
+    params: Params,
 }
 
 impl PreReceive {
-    pub fn run(self) -> eyre::Result<()> {
+    pub fn run(self) -> Result<(), Error<eyre::Error>> {
         Ok(())
     }
 }

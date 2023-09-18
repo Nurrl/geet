@@ -1,6 +1,8 @@
 use clap::Parser;
 use color_eyre::eyre;
 
+use super::{Error, Params};
+
 /// The post-receive hook runs after the entire process is completed
 /// and can be used to update other services or notify users.
 /// It takes the same stdin data as the pre-receive hook.
@@ -14,11 +16,11 @@ use color_eyre::eyre;
 #[derive(Debug, Parser)]
 pub struct PostReceive {
     #[command(flatten)]
-    params: super::Params,
+    params: Params,
 }
 
 impl PostReceive {
-    pub fn run(self) -> eyre::Result<()> {
+    pub fn run(self) -> Result<(), Error<eyre::Error>> {
         println!("Successfully updated refs :: ✓");
 
         Ok(())
