@@ -2,22 +2,21 @@ use std::{collections::HashMap, path::PathBuf};
 
 use color_eyre::eyre::{self, WrapErr};
 use russh::{server::Msg, Channel};
-use russh_keys::key;
 
 use crate::repository::{Authority, Repository};
 
-use super::Service;
+use super::{Key, Service};
 
 #[derive(Debug)]
 pub struct Request {
-    key: key::PublicKey,
+    key: Key,
     storage: PathBuf,
     channel: Channel<Msg>,
     envs: HashMap<String, String>,
 }
 
 impl Request {
-    pub fn new(key: key::PublicKey, storage: PathBuf, channel: Channel<Msg>) -> Self {
+    pub fn new(key: Key, storage: PathBuf, channel: Channel<Msg>) -> Self {
         Self {
             key,
             storage,

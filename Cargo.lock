@@ -94,6 +94,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "base64"
+version = "0.21.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "414dcefbc63d77c526a76b3afcf6fbb9b5e2791c19c3aa2297733208750c6e53"
+
+[[package]]
 name = "base64ct"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -529,6 +535,7 @@ dependencies = [
  "color-eyre",
  "futures",
  "git2",
+ "openssh-keys",
  "parse-display",
  "rstest",
  "russh",
@@ -737,6 +744,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "md-5"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6365506850d44bff6e2fbcb5176cf63650e48bd45ef2fe2665ae1570e0f4b9ca"
+dependencies = [
+ "digest",
+]
+
+[[package]]
 name = "md5"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -839,6 +855,19 @@ name = "opaque-debug"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
+
+[[package]]
+name = "openssh-keys"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c75a0ec2d1b302412fb503224289325fcc0e44600176864804c7211b055cfd58"
+dependencies = [
+ "base64",
+ "byteorder",
+ "md-5",
+ "sha2",
+ "thiserror",
+]
 
 [[package]]
 name = "option-ext"

@@ -9,13 +9,16 @@ use russh::{
 use russh_keys::key;
 use tracing::Instrument;
 
-use crate::{config::Config, transport::Request};
+use crate::{
+    config::Config,
+    transport::{Key, Request},
+};
 
 #[derive(Debug)]
 pub struct Connection {
     config: Arc<Config>,
     addr: SocketAddr,
-    key: Option<key::PublicKey>,
+    key: Option<Key>,
 
     requests: HashMap<ChannelId, Request>,
 }
@@ -35,7 +38,7 @@ impl Connection {
     /// # Panics
     ///
     /// This will panic if called before the authentication procedure.
-    pub fn key(&self) -> &key::PublicKey {
+    pub fn key(&self) -> &Key {
         self.key
             .as_ref()
             .expect("Public key missing from connection context.")
@@ -84,7 +87,7 @@ impl server::Handler for Connection {
         );
 
         // Save the client key for further authentication later
-        self.key = Some(public_key.clone());
+        self.key = Some(Key::from_russh(public_key, user, &self.addr.ip())?);
 
         Ok((self, Auth::Accept))
     }

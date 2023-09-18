@@ -4,7 +4,8 @@ use std::{
 };
 
 use color_eyre::eyre;
-use russh_keys::key;
+
+use crate::transport::Key;
 
 use super::Repository;
 
@@ -23,13 +24,13 @@ pub struct Authority {
     /// The namespace's meta configuration, `/meta.yaml`.
     meta: NamespaceDef,
     /// The public keys allowed to write to this namespace, `/keys/*.pub`.
-    keys: HashMap<PathBuf, key::PublicKey>,
+    keys: HashMap<PathBuf, Key>,
     /// The repositories defined in the namespace, `/repositories/*.yaml`.
     repositories: HashMap<PathBuf, RepositoryDef>,
 }
 
 impl Authority {
-    pub fn init(namespace: Option<impl Into<String>>, key: key::PublicKey) -> Self {
+    pub fn init(namespace: Option<impl Into<String>>, key: Key) -> Self {
         Self {
             meta: NamespaceDef::new(
                 namespace

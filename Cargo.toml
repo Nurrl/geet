@@ -23,6 +23,7 @@ russh-keys = "0.38.0"
 parse-display = "0.8.2"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_yaml = "0.9.25"
+openssh-keys = "0.6.2"
 
 [dev-dependencies]
 rstest = "0.18.2"
