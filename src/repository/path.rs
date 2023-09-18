@@ -29,8 +29,13 @@ impl Path {
     pub fn to_authority_path(&self) -> Path {
         Self {
             namespace: self.namespace.clone(),
-            repository: super::AUTHORITY_REPOSITORY_NAME.into(),
+            repository: AUTHORITY_REPOSITORY_NAME.into(),
         }
+    }
+
+    /// Checks if the current [`Path`] is the authority's repository path.
+    pub fn is_authority(&self) -> bool {
+        self.repository == AUTHORITY_REPOSITORY_NAME
     }
 }
 
@@ -93,8 +98,8 @@ mod tests {
         Path { namespace: Some("~".into()), repository: "repo.git".into() })]
     #[case("/./repo.git",
         Path { namespace: None, repository: "repo.git".into() })]
-    #[case(crate::repository::NAMESPACE_REPOSITORY_NAME,
-            Path { namespace: None, repository: crate::repository::NAMESPACE_REPOSITORY_NAME.into() })]
+    #[case(AUTHORITY_REPOSITORY_NAME,
+            Path { namespace: None, repository: AUTHORITY_REPOSITORY_NAME.into() })]
     fn it_allows_valid_repositories(#[case] path: &str, #[case] expected: Path) {
         let path = Path::from_str(path).expect(path);
 
