@@ -1,3 +1,5 @@
+//! Repository, namespace and system-wide config handling.
+
 use std::path::Path;
 
 use git2::FileMode;

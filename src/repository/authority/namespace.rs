@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use super::Authority;
 use crate::{repository::Id, transport::PubKey};
 
+/// An [`Authority`] residing in a _non-root_ namespace.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Namespace {
     name: String,

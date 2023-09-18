@@ -1,3 +1,5 @@
+//! Types and structs related to _repositories & authorities_.
+
 use std::path::Path;
 
 use git2::RepositoryOpenFlags;

@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
+use super::{namespace::Namespace, Authority};
 use crate::transport::PubKey;
 
-use super::{namespace::Namespace, Authority};
-
+/// An [`Authority`] residing in the _root_ namespace.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Origin {
     #[serde(flatten)]

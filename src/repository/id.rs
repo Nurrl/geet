@@ -1,3 +1,5 @@
+//! Repository identifier parsing, handling and validation primitives.
+
 use std::{
     borrow::Cow,
     ffi::OsStr,
@@ -14,7 +16,7 @@ const REPOSITORY_NAME_EXT: &str = ".git";
 
 /// A repository [`Id`] is defined as a path without a leading `/`
 /// that does not contain any other component than [`path::Component::Normal`]
-/// and has a maximum of two components, ending with `.git`.
+/// and has a maximum of two components, the last one ending with `.git`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Id {
     namespace: Option<String>,
