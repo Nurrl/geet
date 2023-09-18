@@ -1,4 +1,4 @@
-use std::{io, path::Path};
+use std::{collections::HashMap, io, path::Path};
 
 use clap::Parser;
 use color_eyre::eyre;
@@ -20,7 +20,7 @@ mod update;
 #[derive(Debug, Parser, EnumVariantNames)]
 #[command(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]
-pub enum Hook {
+pub enum Hooks {
     /// Execute as a git `pre-receive` hook.
     PreReceive(pre_receive::PreReceive),
     /// Execute as a git `update` hook.
@@ -29,13 +29,13 @@ pub enum Hook {
     PostReceive(post_receive::PostReceive),
 }
 
-impl Hook {
+impl Hooks {
     /// Execute the [`Hook`] and exit accordingly.
     pub async fn run(self) -> ! {
         let result = match self {
-            Hook::PreReceive(hook) => hook.run().await,
-            Hook::Update(hook) => hook.run().await,
-            Hook::PostReceive(hook) => hook.run().await,
+            Hooks::PreReceive(hook) => hook.run().await,
+            Hooks::Update(hook) => hook.run().await,
+            Hooks::PostReceive(hook) => hook.run().await,
         };
 
         match result {
@@ -86,5 +86,13 @@ impl Hook {
         }
 
         Ok(())
+    }
+
+    pub fn env(envs: &mut HashMap<String, String>, storage: &Path, id: &Id) {
+        envs.insert(
+            params::STORAGE_PATH_ENV.into(),
+            storage.to_string_lossy().into(),
+        );
+        envs.insert(params::REPOSITORY_ID_ENV.into(), id.to_string());
     }
 }

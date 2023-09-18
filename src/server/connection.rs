@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::SocketAddr, path::PathBuf};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
 use async_trait::async_trait;
 use color_eyre::eyre;
@@ -9,10 +9,13 @@ use russh::{
 use russh_keys::key;
 use tokio::task::JoinHandle;
 
-use crate::transport::{PubKey, Request};
+use super::Server;
+use crate::transport::{GitConfig, PubKey, Request};
 
 pub struct Connection {
-    storage: PathBuf,
+    server: Arc<Server>,
+    gitconfig: Arc<GitConfig>,
+
     addr: SocketAddr,
     key: Option<PubKey>,
 
@@ -20,9 +23,10 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(storage: PathBuf, addr: SocketAddr) -> Self {
+    pub fn new(server: Arc<Server>, gitconfig: Arc<GitConfig>, addr: SocketAddr) -> Self {
         Self {
-            storage,
+            server,
+            gitconfig,
             addr,
             key: None,
             requests: Default::default(),
@@ -124,7 +128,7 @@ impl server::Handler for Connection {
         session: Session,
     ) -> Result<(Self, bool, Session), Self::Error> {
         tracing::info!(
-            "Opening a `session` channel@{} for `{}`",
+            "Opening channel@{} for `{}`",
             channel.id(),
             self.key().fingerprint()
         );
@@ -132,8 +136,9 @@ impl server::Handler for Connection {
         self.requests.insert(
             channel.id(),
             Request::new(
+                self.server.storage.to_path_buf(),
+                self.gitconfig.clone(),
                 self.key().clone(),
-                self.storage.clone(),
                 channel,
                 session.handle(),
             )

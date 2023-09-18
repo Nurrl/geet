@@ -42,7 +42,11 @@ impl PreReceive {
         let Params { storage, id } = &self.params;
 
         let repository = Repository::open_from_hook(storage, id)?;
-        let is_head = refname.as_bytes() == repository.head()?.name_bytes();
+        let is_head = refname
+            == repository
+                .find_reference("HEAD")?
+                .symbolic_target()
+                .expect("HEAD is not a symbolic reference");
 
         match id.as_type() {
             Type::OriginAuthority(_) => {
@@ -82,7 +86,7 @@ impl PreReceive {
                         .clone()
                 };
 
-                todo!("Perform reference checks");
+                Ok(())
             }
         }
     }

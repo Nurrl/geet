@@ -1,12 +1,17 @@
 use std::{net::SocketAddr, path::PathBuf, time::Duration};
 
 use clap::Parser;
-use color_eyre::eyre;
+use color_eyre::eyre::{self, WrapErr};
 use russh::{MethodSet, SshId};
 use russh_keys::key::{KeyPair, SignatureHash};
 
+use crate::transport::GitConfig;
+
 mod connection;
 pub use connection::Connection;
+
+mod factory;
+pub use factory::Factory;
 
 /// A lightweight, self-configured, ssh git remote.
 #[derive(Debug, Parser)]
@@ -29,7 +34,12 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn bind(self) -> eyre::Result<()> {
+    pub async fn bind(mut self) -> eyre::Result<()> {
+        self.storage = self
+            .storage
+            .canonicalize()
+            .wrap_err("Error reading the storage directory")?;
+
         let keys = match &self.keypair {
             keypairs if !keypairs.is_empty() => keypairs
                 .iter()
@@ -55,28 +65,30 @@ impl Server {
                 env!("CARGO_PKG_NAME"),
                 env!("CARGO_PKG_VERSION")
             )),
+            keys,
             methods: MethodSet::PUBLICKEY,
             auth_banner: self.banner.clone().map(|banner| &*banner.leak()),
             auth_rejection_time: Duration::from_secs(3),
             auth_rejection_time_initial: Some(Duration::ZERO),
-            keys,
-            inactivity_timeout: Some(Duration::from_secs(3)),
+            inactivity_timeout: Some(Duration::from_secs(5)),
             ..Default::default()
         };
 
-        russh::server::run(config.into(), &*self.bind.clone().leak(), self)
-            .await
-            .map_err(Into::into)
-    }
-}
+        tracing::info!(
+            "Starting up the `{}` daemon in `{}`..",
+            env!("CARGO_PKG_NAME"),
+            self.storage.display()
+        );
 
-impl russh::server::Server for Server {
-    type Handler = connection::Connection;
+        let gitconfig = GitConfig::new(&self.storage);
+        gitconfig.populate()?;
 
-    fn new_client(&mut self, addr: Option<std::net::SocketAddr>) -> Self::Handler {
-        Connection::new(
-            self.storage.clone(),
-            addr.expect("A client connected without an `addr`"),
+        russh::server::run(
+            config.into(),
+            &*self.bind.clone().leak(),
+            Factory::from(self, gitconfig),
         )
+        .await
+        .map_err(Into::into)
     }
 }

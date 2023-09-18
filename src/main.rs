@@ -1,5 +1,5 @@
 use clap::Parser;
-use color_eyre::eyre::{self, Context};
+use color_eyre::eyre;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 use geet::{hooks, server};
@@ -11,13 +11,13 @@ pub enum Cli {
     Server(server::Server),
 
     #[command(flatten)]
-    Hooks(hooks::Hook),
+    Hooks(hooks::Hooks),
 }
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     match Cli::parse() {
-        Cli::Server(mut server) => {
+        Cli::Server(server) => {
             // Set-up the pretty-printed error handler
             color_eyre::install()?;
 
@@ -26,16 +26,6 @@ async fn main() -> eyre::Result<()> {
                 .with(fmt::layer())
                 .with(EnvFilter::from_default_env())
                 .init();
-
-            server.storage = server
-                .storage
-                .canonicalize()
-                .wrap_err("Error reading the storage directory")?;
-
-            tracing::info!(
-                "Starting up the `geet` daemon in `{}`..",
-                server.storage.display()
-            );
 
             // Finally configure and start the server
             server.bind().await

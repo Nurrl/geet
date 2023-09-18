@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use color_eyre::eyre::{self, WrapErr};
 use russh::{
@@ -9,7 +9,7 @@ use tokio::task::JoinHandle;
 use tracing::Instrument;
 
 use crate::{
-    hooks::{self, Hook},
+    hooks::Hooks,
     repository::{
         authority::{Authority, Namespace, Origin, Visibility},
         id::Type,
@@ -18,21 +18,31 @@ use crate::{
     transport::service::ServiceAccess,
 };
 
-use super::{PubKey, Service};
+use super::{GitConfig, PubKey, Service};
 
 pub struct Request {
-    key: PubKey,
     storage: PathBuf,
+    gitconfig: Arc<GitConfig>,
+
+    key: PubKey,
     channel: Channel<Msg>,
     session: Handle,
+
     envs: HashMap<String, String>,
 }
 
 impl Request {
-    pub fn new(key: PubKey, storage: PathBuf, channel: Channel<Msg>, session: Handle) -> Self {
+    pub fn new(
+        storage: PathBuf,
+        gitconfig: Arc<GitConfig>,
+        key: PubKey,
+        channel: Channel<Msg>,
+        session: Handle,
+    ) -> Self {
         Self {
-            key,
             storage,
+            gitconfig,
+            key,
             channel,
             session,
             envs: Default::default(),
@@ -86,11 +96,11 @@ impl Request {
         match name.as_str() {
             // Restrict the environment variables to theses
             "GIT_PROTOCOL" => {
-                tracing::debug!("Stored environment variable `{name}={value}`");
+                tracing::trace!("Stored environment variable `{name}={value}`");
 
                 self.envs.insert(name, value);
             }
-            _ => tracing::debug!("Ignored illegal environment variable `{name}={value}`"),
+            _ => tracing::trace!("Ignored illegal environment variable `{name}={value}`"),
         }
 
         let _ = self.session.channel_success(self.channel.id()).await;
@@ -173,16 +183,12 @@ impl Request {
         };
 
         if allow {
-            // Install our server-side hooks
-            Hook::install(&self.storage, service.repository())?;
-            self.envs.insert(
-                hooks::params::STORAGE_PATH_ENV.into(),
-                self.storage.to_string_lossy().into(),
-            );
-            self.envs.insert(
-                hooks::params::REPOSITORY_ID_ENV.into(),
-                service.repository().to_string(),
-            );
+            // Install our server-side hooks and inject env variables
+            Hooks::install(&self.storage, service.repository())?;
+            Hooks::env(&mut self.envs, &self.storage, service.repository());
+
+            // Install our own `.gitconfig`
+            self.gitconfig.env(&mut self.envs);
 
             // Execute the git service
             match service
