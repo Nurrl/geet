@@ -49,18 +49,44 @@ impl Request {
 
         tracing::info!("Received new service request: {service:?}",);
 
-        let repository = Repository::open(&self.storage, &service.repository().to_authority())
-            .wrap_err("Failed to open the git repository")?;
+        if service.repository().is_authority() {
+            let repository = match Repository::open(&self.storage, service.repository().clone()) {
+                Ok(repository) => repository,
+                // When authority repositories are not yet existing, they're auto-created
+                Err(err) if err.code() == git2::ErrorCode::NotFound => {
+                    tracing::info!(
+                        "Initializing git bare repository '{}', as it was non-existant",
+                        service.repository()
+                    );
 
-        if repository.head()?.target().is_none() {
-            let authority = Authority::init(service.repository().namespace(), self.key.clone());
-            authority
-                .store(&repository)
-                .wrap_err("Failed to initialize the Authority repository")?;
+                    Repository::init(&self.storage, service.repository().clone())?
+                }
+                Err(err) => return Err(err).wrap_err("Failed to open git repository"),
+            };
+
+            let authority = match Authority::load(&repository) {
+                Ok(authority) => authority,
+                Err(err) if err.code() == git2::ErrorCode::UnbornBranch => {
+                    tracing::info!(
+                        "Initializing Authority repository '{}', as it was empty",
+                        service.repository()
+                    );
+
+                    let authority = Authority::init(repository.id().namespace(), self.key.clone());
+
+                    authority.commit(&repository, "Initialize Authority repository")?;
+
+                    authority
+                }
+                Err(err) => {
+                    return Err(err).wrap_err("Failed to load the Authority from the repository")
+                }
+            };
+
+            tracing::info!("{authority:?}");
+        } else {
+            unimplemented!("Non-authority repositories not yet implemented.")
         }
-
-        let authority = Authority::load(&repository)
-            .wrap_err("Failed to load the Authority from the repository")?;
 
         Ok(())
     }
