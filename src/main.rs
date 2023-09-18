@@ -2,14 +2,14 @@ use clap::Parser;
 use color_eyre::eyre::{self, Context};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-use geet::{hooks, server};
+use geet::server;
 
 mod config;
 use config::Cli;
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
-    let result = match Cli::parse() {
+    match Cli::parse() {
         Cli::Server(mut config) => {
             // Set-up the pretty-printed error handler
             color_eyre::install()?;
@@ -27,31 +27,25 @@ async fn main() -> eyre::Result<()> {
 
             tracing::info!(
                 "Starting up the `geet` daemon in `{}`..",
-                config.storage.to_str().unwrap_or("<non-unicode>")
+                config.storage.display()
             );
 
             // Finally configure and start the server
-            Ok(server::Server::from(config).bind().await?)
+            server::Server::from(config).bind().await
         }
-        Cli::PreReceive => hooks::pre_receive(),
-        Cli::Update {
-            reference,
-            before,
-            after,
-        } => hooks::update(reference, before, after),
-        Cli::PostReceive => hooks::post_receive(),
-    };
+        Cli::Hook(hook) => {
+            if let Err(err) = hook.run() {
+                // When hooks exit, send back the error to the client
+                print!("error: {err}");
+                if let Some(source) = err.source() {
+                    print!(": {source}");
+                }
+                println!();
 
-    // When hooks exit, send back the error to the client
-    if let Err(err) = result {
-        print!("error: {err}",);
-        if let Some(source) = err.source() {
-            print!(": {source}");
+                std::process::exit(1);
+            }
+
+            Ok(())
         }
-        println!();
-
-        std::process::exit(1);
     }
-
-    Ok(())
 }

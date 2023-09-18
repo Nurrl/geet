@@ -176,11 +176,11 @@ impl Request {
             // Install our server-side hooks
             Repository::hook(&self.storage, service.repository())?;
             self.envs.insert(
-                hooks::STORAGE_PATH_ENV.into(),
+                hooks::params::STORAGE_PATH_ENV.into(),
                 self.storage.to_string_lossy().into(),
             );
             self.envs.insert(
-                hooks::REPOSITORY_ID_ENV.into(),
+                hooks::params::REPOSITORY_ID_ENV.into(),
                 service.repository().to_string(),
             );
 

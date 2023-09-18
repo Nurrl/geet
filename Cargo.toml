@@ -17,7 +17,7 @@ tracing-subscriber = { version = "0.3.17", features = [
     "env-filter",
     "tracing-log",
 ] }
-clap = { version = "4.4.2", features = ["derive"] }
+clap = { version = "4.4.2", features = ["derive", "env"] }
 
 git2 = { version = "0.18.0", default-features = false }
 russh = { version = "0.38.0", features = ["openssl"] }
