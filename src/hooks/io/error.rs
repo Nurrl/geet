@@ -2,6 +2,8 @@ use thiserror::Error;
 
 use crate::repository::source;
 
+use super::Ref;
+
 /// An [`enum@Error`] that can occur while executing a hook.
 #[derive(Debug, Error)]
 pub enum Error {
@@ -14,10 +16,10 @@ pub enum Error {
     RefUpdateParse(parse_display::ParseError),
 
     #[error("Ref `{0}` may not be deleted")]
-    DeleteRef(String),
+    DeleteRef(Ref),
 
     #[error("Non fast-forward updates are disabled on `{0}`")]
-    NoFastForward(String),
+    NoFastForward(Ref),
 
     #[error("Unable to parse source, {0}")]
     SourceParse(#[from] source::Error),

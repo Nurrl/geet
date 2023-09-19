@@ -74,9 +74,9 @@ impl Hooks {
     /// Setup environment variables to successfully use [`Hooks`].
     pub fn env(envs: &mut HashMap<String, String>, storage: &Path, id: &Id) {
         envs.insert(
-            io::STORAGE_PATH_ENV.into(),
+            io::params::STORAGE_PATH_ENV.into(),
             storage.to_string_lossy().into(),
         );
-        envs.insert(io::REPOSITORY_ID_ENV.into(), id.to_string());
+        envs.insert(io::params::REPOSITORY_ID_ENV.into(), id.to_string());
     }
 }

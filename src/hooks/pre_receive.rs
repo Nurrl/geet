@@ -63,20 +63,16 @@ impl PreReceive {
                         .map_err(Error::from)
                 };
 
-                if let Err(mut err) = res {
-                    if !is_head {
-                        err = err.into_hint();
-                    }
-
-                    Err(err)
+                if !is_head {
+                    res.map_err(Error::into_hint)
                 } else {
-                    Ok(())
+                    res
                 }
             }
             Type::Plain(id) => {
                 let source = Repository::open(storage, &id.to_source())?;
 
-                let def = if id.namespace().is_none() {
+                let config = if id.namespace().is_none() {
                     Origin::read(&source)?
                         .repository(id)
                         .expect("The repository is not defined in it's source repository")
