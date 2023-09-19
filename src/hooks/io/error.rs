@@ -19,7 +19,7 @@ pub enum Error {
     #[error("Non fast-forward updates are disabled on `{0}`")]
     NoFastForward(String),
 
-    #[error("Unable to parse source repository: {0}")]
+    #[error("Unable to parse source, {0}")]
     SourceParse(#[from] source::Error),
 
     #[error(transparent)]
@@ -45,5 +45,11 @@ impl Error {
                 std::process::exit(1);
             }
         }
+    }
+
+    /// Transforms the error into a _hint_,
+    /// effectively rendering it non-fatal.
+    pub fn into_hint(self) -> Self {
+        Self::Hint(self.into())
     }
 }

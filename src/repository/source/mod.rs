@@ -24,19 +24,19 @@ fn signature() -> Result<git2::Signature<'static>, Error> {
 /// reading and comitting to these special repositories.
 pub trait Source: Serialize + DeserializeOwned {
     /// The in-repository path to the source file.
-    const PATH: &'static str = "seed.yaml";
+    const PATH: &'static str = "seed.toml";
 
     /// Read the [`Source`] from the `HEAD` of the repository.
     fn read(repository: &Repository) -> Result<Self, Error> {
         let head = repository.head()?.peel_to_commit()?;
         let tree = head.tree()?;
 
-        Ok(serde_yaml::from_slice(
+        Ok(toml::from_str(std::str::from_utf8(
             tree.get_path(Path::new(Self::PATH))?
                 .to_object(repository)?
                 .peel_to_blob()?
                 .content(),
-        )?)
+        )?)?)
     }
 
     /// Read the [`Source`] from the provided `commit` in the repository.
@@ -44,17 +44,17 @@ pub trait Source: Serialize + DeserializeOwned {
         let head = repository.find_commit(oid)?;
         let tree = head.tree()?;
 
-        Ok(serde_yaml::from_slice(
+        Ok(toml::from_str(std::str::from_utf8(
             tree.get_path(Path::new(Self::PATH))?
                 .to_object(repository)?
                 .peel_to_blob()?
                 .content(),
-        )?)
+        )?)?)
     }
 
     /// Commit the [`Source`] to the provided repository, with the provided commit `message`.
     fn commit(&self, repository: &Repository, message: &str) -> Result<(), Error> {
-        let conf = repository.blob(serde_yaml::to_string(&self)?.as_bytes())?;
+        let conf = repository.blob(toml::to_string_pretty(&self)?.as_bytes())?;
 
         let tree = {
             let mut root = repository.treebuilder(None)?;

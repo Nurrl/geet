@@ -4,7 +4,6 @@ use std::{path::PathBuf, str::FromStr};
 
 use clap::Parser;
 use futures::{io::BufReader, AsyncBufReadExt, AsyncRead, Stream, TryStreamExt};
-use git2::Oid;
 use parse_display::{Display, FromStr};
 
 use crate::repository::{Id, Repository};
@@ -29,11 +28,11 @@ pub struct Params {
 }
 
 /// A structure representing a ref update parsed from stdin.
-#[derive(FromStr, Display)]
+#[derive(Debug, FromStr, Display)]
 #[display("{oldrev} {newrev} {refname}")]
 pub struct RefUpdate {
-    pub oldrev: Oid,
-    pub newrev: Oid,
+    pub oldrev: git2::Oid,
+    pub newrev: git2::Oid,
     pub refname: String,
 }
 

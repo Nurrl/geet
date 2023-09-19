@@ -12,9 +12,15 @@ pub enum Error {
     #[error("Git error: {0}")]
     Git(#[from] git2::Error),
 
-    #[error("YAML error: {0}")]
-    Yaml(#[from] serde_yaml::Error),
+    #[error(transparent)]
+    ConfigDe(#[from] toml::de::Error),
 
-    #[error("Key error: {0}")]
+    #[error(transparent)]
+    ConfigSer(#[from] toml::ser::Error),
+
+    #[error(transparent)]
+    Utf8(#[from] std::str::Utf8Error),
+
+    #[error(transparent)]
     Key(#[from] pkey::Error),
 }

@@ -1,5 +1,6 @@
 use std::ops::Deref;
 
+use nonempty::{nonempty, NonEmpty};
 use serde::{Deserialize, Serialize};
 
 use super::Source;
@@ -11,14 +12,14 @@ use crate::{
 /// An [`Source`] residing in a _non-root_ namespace.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Namespace {
-    keys: Vec<PubKey>,
+    keys: NonEmpty<PubKey>,
     repositories: Vec<RepositoryDef>,
 }
 
 impl Namespace {
     pub fn init(key: PubKey) -> Self {
         Self {
-            keys: vec![key],
+            keys: nonempty![key],
             repositories: Default::default(),
         }
     }

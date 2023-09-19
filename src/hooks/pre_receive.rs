@@ -40,7 +40,7 @@ impl PreReceive {
         let is_delete = update.is_delete();
 
         match id.as_type() {
-            Type::OriginSource(_) => {
+            Type::OriginSource(_) | Type::NamespaceSource(_) => {
                 if is_delete {
                     return if is_head {
                         Err(Error::DeleteRef(update.refname))
@@ -53,36 +53,19 @@ impl PreReceive {
                     return Err(Error::NoFastForward(update.refname));
                 }
 
-                if let Err(mut err) =
-                    Origin::read_commit(&repository, update.newrev).map_err(Error::from)
-                {
-                    if !is_head {
-                        err = Error::Hint(err.into());
-                    }
-
-                    Err(err)
+                let res = if id.namespace().is_none() {
+                    Origin::read_commit(&repository, update.newrev)
+                        .map(|_| ())
+                        .map_err(Error::from)
                 } else {
-                    Ok(())
-                }
-            }
-            Type::NamespaceSource(_) => {
-                if is_delete {
-                    return if is_head {
-                        Err(Error::DeleteRef(update.refname))
-                    } else {
-                        // If we allow delete, don't check anything else
-                        Ok(())
-                    };
-                }
-                if !is_ff && is_head {
-                    return Err(Error::NoFastForward(update.refname));
-                }
+                    Namespace::read_commit(&repository, update.newrev)
+                        .map(|_| ())
+                        .map_err(Error::from)
+                };
 
-                if let Err(mut err) =
-                    Namespace::read_commit(&repository, update.newrev).map_err(Error::from)
-                {
+                if let Err(mut err) = res {
                     if !is_head {
-                        err = Error::Hint(err.into());
+                        err = err.into_hint();
                     }
 
                     Err(err)

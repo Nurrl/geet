@@ -71,6 +71,7 @@ impl Hooks {
         Ok(())
     }
 
+    /// Setup environment variables to successfully use [`Hooks`].
     pub fn env(envs: &mut HashMap<String, String>, storage: &Path, id: &Id) {
         envs.insert(
             io::STORAGE_PATH_ENV.into(),

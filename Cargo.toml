@@ -27,8 +27,9 @@ openssh-keys = "0.6.2"
 strum = { version = "0.25.0", features = ["derive"] }
 parse-display = "0.8.2"
 serde = { version = "1.0.188", features = ["derive"] }
-serde_yaml = "0.9.25"
 serde_with = "3.3.0"
+toml = { version = "0.8.0", features = ["preserve_order"] }
+nonempty = { version = "0.8.1", features = ["serde", "serialize"] }
 
 [dev-dependencies]
 rstest = "0.18.2"
