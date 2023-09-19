@@ -3,7 +3,7 @@ use std::io;
 use clap::Parser;
 use futures::{io::AllowStdIo, TryStreamExt};
 
-use super::{Error, Params, RefUpdate};
+use super::{Error, Params, Ref, RefUpdate};
 use crate::repository::{
     id::Type,
     source::{Namespace, Origin, Source},
@@ -50,7 +50,7 @@ impl PreReceive {
                     };
                 }
                 if !is_ff && is_head {
-                    return Err(Error::NoFastForward(update.refname));
+                    return Err(Error::NonFastForward(update.refname));
                 }
 
                 let res = if id.namespace().is_none() {
@@ -83,6 +83,35 @@ impl PreReceive {
                         .expect("The repository is not defined in it's source repository")
                         .clone()
                 };
+
+                match (&update.refname, &config.branches, &config.tags) {
+                    (Ref::Branch(name), Some(regex), _) if !regex.is_match(name) => {
+                        return Err(Error::IllegalRefName(name.into(), regex.clone()))?
+                    }
+                    (Ref::Tag(name), _, Some(regex)) if !regex.is_match(name) => {
+                        return Err(Error::IllegalRefName(name.into(), regex.clone()))?
+                    }
+                    _ => (),
+                }
+
+                println!("ref: {:?}\n{:?}", update.refname, config.branch);
+
+                let refconfig = match &update.refname {
+                    Ref::Branch(name) => config
+                        .branch
+                        .get(name)
+                        .map(Clone::clone)
+                        .unwrap_or_default(),
+                    Ref::Tag(_) => Default::default(),
+                };
+
+                if !refconfig.allow_delete && is_delete {
+                    return Err(Error::DeleteRef(update.refname));
+                }
+
+                if !refconfig.allow_force && !is_ff {
+                    return Err(Error::NonFastForward(update.refname));
+                }
 
                 Ok(())
             }

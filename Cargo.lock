@@ -738,6 +738,7 @@ dependencies = [
  "nonempty",
  "openssh-keys",
  "parse-display",
+ "regex",
  "rstest",
  "russh",
  "russh-keys",
@@ -1987,7 +1988,6 @@ version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c226a7bba6d859b63c92c4b4fe69c5b6b72d0cb897dbc8e6012298e6154cb56e"
 dependencies = [
- "indexmap 2.0.0",
  "serde",
  "serde_spanned",
  "toml_datetime",

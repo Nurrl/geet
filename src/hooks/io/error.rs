@@ -1,3 +1,4 @@
+use regex::Regex;
 use thiserror::Error;
 
 use crate::repository::source;
@@ -19,7 +20,10 @@ pub enum Error {
     DeleteRef(Ref),
 
     #[error("Non fast-forward updates are disabled on `{0}`")]
-    NoFastForward(Ref),
+    NonFastForward(Ref),
+
+    #[error("The ref name `{0}` does not match {1}")]
+    IllegalRefName(String, Regex),
 
     #[error("Unable to parse source, {0}")]
     SourceParse(#[from] source::Error),

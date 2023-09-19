@@ -9,7 +9,7 @@ use strum::{EnumVariantNames, VariantNames};
 use crate::repository::Id;
 
 pub mod io;
-use io::{Error, Params, RefUpdate};
+use io::{Error, Params, Ref, RefUpdate};
 
 mod post_receive;
 mod pre_receive;

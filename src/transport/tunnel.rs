@@ -128,11 +128,11 @@ impl Tunnel {
                 .map(|_| source)
         })?;
 
-        let allow = match service.repository().as_type() {
+        let allowed = match service.repository().as_type() {
             Type::OriginSource(_) => origin.has_key(&self.key),
             Type::NamespaceSource(id) => {
-                let namespace = if origin.registration()
-                    || (!origin.registration() && origin.has_key(&self.key))
+                let namespace = if origin.allow_registration()
+                    || (!origin.allow_registration() && origin.has_key(&self.key))
                 {
                     // Auto-create and initialize the namespace source repository if:
                     // - The auto-registration is enabled
@@ -157,11 +157,11 @@ impl Tunnel {
             Type::Plain(id) => {
                 let source = Namespace::read(&Repository::open(&self.storage, &id.to_source())?)?;
 
-                let def = source
+                let config = source
                     .repository(id)
                     .ok_or_else(|| eyre::eyre!("Missing repository definition for `{id}`"))?;
 
-                let allow = match def.visibility() {
+                let allowed = match config.visibility {
                     Visibility::Private => source.has_key(&self.key),
                     Visibility::Public => {
                         service.access() == ServiceAccess::Read || source.has_key(&self.key)
@@ -169,17 +169,17 @@ impl Tunnel {
                     Visibility::Archive => service.access() == ServiceAccess::Read,
                 };
 
-                if allow {
+                if allowed {
                     // Create the repository if non-existant
                     Repository::open(&self.storage, id)
                         .or_else(|_| Repository::init(&self.storage, id))?;
                 }
 
-                allow
+                allowed
             }
         };
 
-        if allow {
+        if allowed {
             // Install our server-side hooks and inject env variables
             Hooks::install(&self.storage, service.repository())?;
             Hooks::env(&mut self.envs, &self.storage, service.repository());

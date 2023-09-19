@@ -5,24 +5,25 @@ use crate::transport::PubKey;
 
 /// An [`Source`] residing in the _origin_ namespace.
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct Origin {
+    #[serde(default)]
+    allow_registration: bool,
+
     #[serde(flatten)]
     namespace: Namespace,
-
-    #[serde(default)]
-    registration: bool,
 }
 
 impl Origin {
     pub fn init(key: PubKey) -> Self {
         Self {
+            allow_registration: Default::default(),
             namespace: Namespace::init(key),
-            registration: Default::default(),
         }
     }
 
-    pub fn registration(&self) -> bool {
-        self.registration
+    pub fn allow_registration(&self) -> bool {
+        self.allow_registration
     }
 }
 
