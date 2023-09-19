@@ -11,8 +11,8 @@ use tracing::Instrument;
 use crate::{
     hooks::Hooks,
     repository::{
-        authority::{Authority, Namespace, Origin, Visibility},
         id::Type,
+        source::{Namespace, Origin, Source, Visibility},
         Id, Repository,
     },
     transport::service::ServiceAccess,
@@ -119,22 +119,22 @@ impl Tunnel {
         let repository = Repository::open(&self.storage, &Id::origin())
             .or_else(|_| Repository::init(&self.storage, &Id::origin()))?;
 
-        // Load the Authority or initialize it.
+        // Load the source or initialize it.
         let origin = Origin::read(&repository).or_else(|_| {
-            let authority = Origin::init(self.key.clone());
+            let source = Origin::init(self.key.clone());
 
-            authority
-                .commit(&repository, "Origin authority repository initialization")
-                .map(|_| authority)
+            source
+                .commit(&repository, "Source repository initialization")
+                .map(|_| source)
         })?;
 
         let allow = match service.repository().as_type() {
-            Type::OriginAuthority(_) => origin.has_key(&self.key),
-            Type::NamespaceAuthority(id) => {
+            Type::OriginSource(_) => origin.has_key(&self.key),
+            Type::NamespaceSource(id) => {
                 let namespace = if origin.registration()
                     || (!origin.registration() && origin.has_key(&self.key))
                 {
-                    // Auto-create and initialize the namespace authority repository if:
+                    // Auto-create and initialize the namespace source repository if:
                     // - The auto-registration is enabled
                     // - The auto-registration is disabled, but the user is owner on the origin repository
 
@@ -142,11 +142,11 @@ impl Tunnel {
                         .or_else(|_| Repository::init(&self.storage, id))?;
 
                     Namespace::read(&repository).or_else(|_| {
-                        let authority = Namespace::init(self.key.clone());
+                        let source = Namespace::init(self.key.clone());
 
-                        authority
-                            .commit(&repository, "Namespace authority repository initialization")
-                            .map(|_| authority)
+                        source
+                            .commit(&repository, "Source repository initialization")
+                            .map(|_| source)
                     })?
                 } else {
                     Namespace::read(&Repository::open(&self.storage, id)?)?
@@ -155,17 +155,16 @@ impl Tunnel {
                 namespace.has_key(&self.key)
             }
             Type::Plain(id) => {
-                let authority =
-                    Namespace::read(&Repository::open(&self.storage, &id.to_authority())?)?;
+                let source = Namespace::read(&Repository::open(&self.storage, &id.to_source())?)?;
 
-                let def = authority
+                let def = source
                     .repository(id)
                     .ok_or_else(|| eyre::eyre!("Missing repository definition for `{id}`"))?;
 
                 let allow = match def.visibility() {
-                    Visibility::Private => authority.has_key(&self.key),
+                    Visibility::Private => source.has_key(&self.key),
                     Visibility::Public => {
-                        service.access() == ServiceAccess::Read || authority.has_key(&self.key)
+                        service.access() == ServiceAccess::Read || source.has_key(&self.key)
                     }
                     Visibility::Archive => service.access() == ServiceAccess::Read,
                 };

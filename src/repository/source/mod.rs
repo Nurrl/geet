@@ -20,13 +20,13 @@ fn signature() -> Result<git2::Signature<'static>, Error> {
     git2::Signature::now("geet", "git@server.commit").map_err(Into::into)
 }
 
-/// The trait representing an [`Authority`], allows
+/// The trait representing a [`Source`], allows
 /// reading and comitting to these special repositories.
-pub trait Authority: Serialize + DeserializeOwned {
-    /// The in-repository path to the Authority file.
-    const PATH: &'static str = "authority.yaml";
+pub trait Source: Serialize + DeserializeOwned {
+    /// The in-repository path to the source file.
+    const PATH: &'static str = "seed.yaml";
 
-    /// Read the [`Authority`] from the `HEAD` of the repository.
+    /// Read the [`Source`] from the `HEAD` of the repository.
     fn read(repository: &Repository) -> Result<Self, Error> {
         let head = repository.head()?.peel_to_commit()?;
         let tree = head.tree()?;
@@ -39,7 +39,7 @@ pub trait Authority: Serialize + DeserializeOwned {
         )?)
     }
 
-    /// Read the [`Authority`] from the provided `commit` in the repository.
+    /// Read the [`Source`] from the provided `commit` in the repository.
     fn read_commit(repository: &Repository, oid: Oid) -> Result<Self, Error> {
         let head = repository.find_commit(oid)?;
         let tree = head.tree()?;
@@ -52,7 +52,7 @@ pub trait Authority: Serialize + DeserializeOwned {
         )?)
     }
 
-    /// Commit the [`Authority`] to the provided repository, with the provided commit `message`.
+    /// Commit the [`Source`] to the provided repository, with the provided commit `message`.
     fn commit(&self, repository: &Repository, message: &str) -> Result<(), Error> {
         let conf = repository.blob(serde_yaml::to_string(&self)?.as_bytes())?;
 

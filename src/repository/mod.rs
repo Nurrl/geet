@@ -4,17 +4,16 @@ use std::path::Path;
 
 use git2::RepositoryOpenFlags;
 
-/// Defines the default git `HEAD` ref when creating a new repository
+/// Defines the default git `HEAD` ref when creating a new repository.
 pub const DEFAULT_HEAD_REF: &str = "refs/heads/main";
 
-/// The name of the authority repository in the repository root
-/// and in repository namespaces.
-pub const AUTHORITY_REPOSITORY_NAME: id::Name = id::Name(id::Base(std::borrow::Cow::Borrowed("?")));
+/// The name of the source repositories.
+pub const SOURCE_REPOSITORY_NAME: id::Name = id::Name(id::Base(std::borrow::Cow::Borrowed("?")));
 
 pub mod id;
 pub use id::Id;
 
-pub mod authority;
+pub mod source;
 
 /// A handle to a bare repository.
 pub struct Repository {

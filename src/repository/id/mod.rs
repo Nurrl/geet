@@ -5,7 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use super::AUTHORITY_REPOSITORY_NAME;
+use super::SOURCE_REPOSITORY_NAME;
 
 mod error;
 pub use error::Error;
@@ -26,6 +26,14 @@ pub struct Id {
 }
 
 impl Id {
+    /// Get the [`Id`] of the origin source's repository.
+    pub fn origin() -> Self {
+        Self {
+            namespace: None,
+            repository: SOURCE_REPOSITORY_NAME,
+        }
+    }
+
     pub fn namespace(&self) -> Option<&str> {
         self.namespace.as_deref()
     }
@@ -34,35 +42,28 @@ impl Id {
         &self.repository
     }
 
-    pub fn is_authority(&self) -> bool {
-        self.repository == AUTHORITY_REPOSITORY_NAME
-    }
-
     pub fn as_type(&self) -> Type<'_> {
         match &self.namespace {
-            None if self.is_authority() => Type::OriginAuthority(self),
-            Some(_) if self.is_authority() => Type::NamespaceAuthority(self),
+            None if self.is_source() => Type::OriginSource(self),
+            Some(_) if self.is_source() => Type::NamespaceSource(self),
             _ => Type::Plain(self),
         }
     }
 
-    pub fn origin() -> Self {
-        Self {
-            namespace: None,
-            repository: AUTHORITY_REPOSITORY_NAME,
-        }
+    pub fn is_source(&self) -> bool {
+        self.repository == SOURCE_REPOSITORY_NAME
     }
 
-    /// Constructs the authority repository [`Id`]
+    /// Constructs the source repository [`Id`]
     /// from the current `namespace`:`repository` couple.
-    pub fn to_authority(&self) -> Self {
+    pub fn to_source(&self) -> Self {
         Self {
             namespace: self.namespace.clone(),
-            repository: AUTHORITY_REPOSITORY_NAME,
+            repository: SOURCE_REPOSITORY_NAME,
         }
     }
 
-    /// Converts the current [`Id`] to a [`PathBuf`], in the `sotrage` path.
+    /// Converts the current [`Id`] to a [`PathBuf`], in the `storage` path.
     pub fn to_path(&self, storage: &Path) -> PathBuf {
         storage.join(self.to_string())
     }
@@ -96,8 +97,8 @@ impl FromStr for Id {
 
 /// The repository type regarding it's [`Id`].
 pub enum Type<'i> {
-    OriginAuthority(&'i Id),
-    NamespaceAuthority(&'i Id),
+    OriginSource(&'i Id),
+    NamespaceSource(&'i Id),
     Plain(&'i Id),
 }
 

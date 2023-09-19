@@ -5,8 +5,8 @@ use futures::{io::AllowStdIo, TryStreamExt};
 
 use super::{Error, Params, RefUpdate};
 use crate::repository::{
-    authority::{Authority, Namespace, Origin},
     id::Type,
+    source::{Namespace, Origin, Source},
     Repository,
 };
 
@@ -40,7 +40,7 @@ impl PreReceive {
         let is_delete = update.is_delete();
 
         match id.as_type() {
-            Type::OriginAuthority(_) => {
+            Type::OriginSource(_) => {
                 if is_delete {
                     return if is_head {
                         Err(Error::DeleteRef(update.refname))
@@ -65,7 +65,7 @@ impl PreReceive {
                     Ok(())
                 }
             }
-            Type::NamespaceAuthority(_) => {
+            Type::NamespaceSource(_) => {
                 if is_delete {
                     return if is_head {
                         Err(Error::DeleteRef(update.refname))
@@ -91,17 +91,17 @@ impl PreReceive {
                 }
             }
             Type::Plain(id) => {
-                let authority = Repository::open(storage, &id.to_authority())?;
+                let source = Repository::open(storage, &id.to_source())?;
 
                 let def = if id.namespace().is_none() {
-                    Origin::read(&authority)?
+                    Origin::read(&source)?
                         .repository(id)
-                        .expect("The repository is not defined in it's authority repository")
+                        .expect("The repository is not defined in it's source repository")
                         .clone()
                 } else {
-                    Namespace::read(&authority)?
+                    Namespace::read(&source)?
                         .repository(id)
-                        .expect("The repository is not defined in it's authority repository")
+                        .expect("The repository is not defined in it's source repository")
                         .clone()
                 };
 

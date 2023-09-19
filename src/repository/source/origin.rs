@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use super::{namespace::Namespace, Authority};
+use super::{namespace::Namespace, Source};
 use crate::transport::PubKey;
 
-/// An [`Authority`] residing in the _root_ namespace.
+/// An [`Source`] residing in the _origin_ namespace.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Origin {
     #[serde(flatten)]
@@ -26,7 +26,7 @@ impl Origin {
     }
 }
 
-impl Authority for Origin {}
+impl Source for Origin {}
 
 impl std::ops::Deref for Origin {
     type Target = Namespace;

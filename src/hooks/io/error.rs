@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::repository::authority;
+use crate::repository::source;
 
 /// An [`enum@Error`] that can occur while executing a hook.
 #[derive(Debug, Error)]
@@ -19,8 +19,8 @@ pub enum Error {
     #[error("Non fast-forward updates are disabled on `{0}`")]
     NoFastForward(String),
 
-    #[error("Unable to parse authority: {0}")]
-    AuthorityParse(#[from] authority::Error),
+    #[error("Unable to parse source repository: {0}")]
+    SourceParse(#[from] source::Error),
 
     #[error(transparent)]
     Git(#[from] git2::Error),

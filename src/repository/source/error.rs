@@ -3,9 +3,9 @@ use thiserror::Error;
 use crate::transport::pkey;
 
 #[cfg(doc)]
-use super::Authority;
+use super::Source;
 
-/// An [`enum@Error`] that can occur while manipulating an [`Authority`].
+/// An [`enum@Error`] that can occur while manipulating an [`Source`].
 #[derive(Debug, Error)]
 
 pub enum Error {

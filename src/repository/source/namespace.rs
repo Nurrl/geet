@@ -2,13 +2,13 @@ use std::ops::Deref;
 
 use serde::{Deserialize, Serialize};
 
-use super::Authority;
+use super::Source;
 use crate::{
     repository::{id::Base, Id},
     transport::PubKey,
 };
 
-/// An [`Authority`] residing in a _non-root_ namespace.
+/// An [`Source`] residing in a _non-root_ namespace.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Namespace {
     keys: Vec<PubKey>,
@@ -34,7 +34,7 @@ impl Namespace {
     }
 }
 
-impl Authority for Namespace {}
+impl Source for Namespace {}
 
 /// The configuration for a repository, with some metadata
 /// and some technical configuration.

@@ -14,11 +14,15 @@ use tokio::{
 
 use crate::repository;
 
-/// A representation of the service request received from the git client.
+/// A representation of the service request received from the git client,
+/// parsed from the command sent by git.
 #[derive(Debug, FromStr, Display)]
 #[display("{} '{repository}'", style = "kebab-case")]
 pub enum Service {
+    /// Invoked by `git fetch-pack`, learns what objects the other side is missing, and sends them after packing.
     GitUploadPack { repository: repository::Id },
+
+    /// Invoked by `git send-pack` and updates the repository with the information fed from the remote end.
     GitReceivePack { repository: repository::Id },
 }
 
