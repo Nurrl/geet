@@ -13,10 +13,10 @@ pub enum Error {
     Git(#[from] git2::Error),
 
     #[error(transparent)]
-    ConfigDe(#[from] toml::de::Error),
+    ConfigSpanned(format_serde_error::SerdeError),
 
     #[error(transparent)]
-    ConfigSer(#[from] toml::ser::Error),
+    Config(#[from] serde_yaml::Error),
 
     #[error(transparent)]
     Utf8(#[from] std::str::Utf8Error),

@@ -94,8 +94,6 @@ impl PreReceive {
                     _ => (),
                 }
 
-                println!("ref: {:?}\n{:?}", update.refname, config.branch);
-
                 let refconfig = match &update.refname {
                     Ref::Branch(name) => config
                         .branch

@@ -12,8 +12,8 @@ use crate::{
 
 /// An [`Source`] residing in a _non-root_ namespace.
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Namespace {
-    #[serde(rename = "namespace-keys")]
     keys: NonEmpty<PubKey>,
 
     #[serde(default)]
@@ -45,6 +45,7 @@ impl Source for Namespace {}
 /// and some technical configuration.
 #[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RepositoryConfig {
     pub name: Base,
     pub description: Option<String>,
@@ -75,7 +76,7 @@ pub enum Visibility {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 
 pub struct RefConfig {
     pub allow_force: bool,

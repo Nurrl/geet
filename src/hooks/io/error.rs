@@ -25,7 +25,7 @@ pub enum Error {
     #[error("The ref name `{0}` does not match {1}")]
     IllegalRefName(String, Regex),
 
-    #[error("Unable to parse source, {0}")]
+    #[error("Unable to parse source: {0}")]
     SourceParse(#[from] source::Error),
 
     #[error(transparent)]

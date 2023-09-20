@@ -5,20 +5,20 @@ use crate::transport::PubKey;
 
 /// An [`Source`] residing in the _origin_ namespace.
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Origin {
+    #[serde(flatten)]
+    source: Namespace,
+
     #[serde(default)]
     allow_registration: bool,
-
-    #[serde(flatten)]
-    namespace: Namespace,
 }
 
 impl Origin {
     pub fn init(key: PubKey) -> Self {
         Self {
             allow_registration: Default::default(),
-            namespace: Namespace::init(key),
+            source: Namespace::init(key),
         }
     }
 
@@ -33,6 +33,6 @@ impl std::ops::Deref for Origin {
     type Target = Namespace;
 
     fn deref(&self) -> &Self::Target {
-        &self.namespace
+        &self.source
     }
 }
