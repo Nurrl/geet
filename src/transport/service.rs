@@ -7,7 +7,7 @@ use std::{
 use color_eyre::eyre;
 use parse_display::{Display, FromStr};
 use russh::{server::Msg, Channel};
-use tokio::process::Command;
+use tokio::{io::AsyncWriteExt, process::Command};
 
 use crate::repository;
 
@@ -77,7 +77,7 @@ impl Service {
                 .take()
                 .expect("Unable to take service's `stdin` handle"),
         );
-        let (mut tx, mut rx) = channel.into_io_parts();
+        let (mut tx, mut rx) = (channel.make_writer(), channel.make_reader());
 
         tokio::try_join!(
             async move {
@@ -88,7 +88,7 @@ impl Service {
             },
             async move {
                 let res = tokio::io::copy(&mut stdout, &mut tx).await;
-                drop(tx);
+                tx.shutdown().await?;
 
                 res
             },
