@@ -1,6 +1,13 @@
 [package]
-name = "geet"
-version = "0.1.0"
+name = "furrow"
+description = "A lightweight, self-configured, ssh git remote."
+documentation = "https://docs.rs/furrow"
+repository = "https://github.com/lowlevl/furrow"
+readme = "README.md"
+license = "GPL-3.0"
+keywords = ["git", "server", "remote", "no-front"]
+authors = ["Maya the bee <15341887+lowlevl@users.noreply.github.com>"]
+version = "0.0.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

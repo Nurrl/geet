@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[cfg(doc)]
-use super::{Id, Name, Base};
+use super::{Base, Id, Name};
 
 /// An error that can happen during the parsing and usage
 /// of [`Id`]s, [`Name`]s or [`Base`]s.

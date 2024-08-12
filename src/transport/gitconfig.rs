@@ -22,11 +22,13 @@ impl GitConfig {
     /// Populate the gitconfig file with the following settings.
     ///
     /// - `receive.keepAlive`: `3`
-    /// Send a keep-alive every `n` seconds, to prevent the server timing out.
+    ///   Send a keep-alive every `n` seconds, to prevent the server timing out.
+    ///
     /// - `receive.fsckObject`: `true`
-    /// Makes `git-receive-pack` check all received objects for errors or security issues.
+    ///   Makes `git-receive-pack` check all received objects for errors or security issues.
+    ///
     /// - `receive.denyDeleteCurrent`: `false`
-    /// Allows the client to delete the `HEAD` branch.
+    ///   Allows the client to delete the `HEAD` branch.
     ///
     pub fn populate(&self) -> Result<(), git2::Error> {
         let mut config = git2::Config::open(&self.path)?;

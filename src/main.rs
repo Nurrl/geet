@@ -6,10 +6,10 @@ use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 #[command(multicall = true, rename_all = "kebab-case")]
 pub enum Cli {
     #[command(name = env!("CARGO_PKG_NAME"))]
-    Server(geet::Server),
+    Server(furrow::Server),
 
     #[command(flatten)]
-    Hooks(geet::Hooks),
+    Hooks(furrow::Hooks),
 }
 
 #[tokio::main]

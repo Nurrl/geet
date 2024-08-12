@@ -17,7 +17,7 @@ mod origin;
 pub use origin::Origin;
 
 fn signature() -> Result<git2::Signature<'static>, Error> {
-    git2::Signature::now("geet", "git@server.commit").map_err(Into::into)
+    git2::Signature::now("furrow", "git@server.commit").map_err(Into::into)
 }
 
 /// The trait representing a [`Source`], allows

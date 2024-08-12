@@ -95,11 +95,7 @@ impl PreReceive {
                 }
 
                 let refconfig = match &update.refname {
-                    Ref::Branch(name) => config
-                        .branch
-                        .get(name)
-                        .map(Clone::clone)
-                        .unwrap_or_default(),
+                    Ref::Branch(name) => config.branch.get(name).cloned().unwrap_or_default(),
                     Ref::Tag(_) => Default::default(),
                 };
 
