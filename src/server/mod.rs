@@ -2,10 +2,15 @@
 
 use std::{net::SocketAddr, path::PathBuf, time::Duration};
 
+use assh::side::server;
+use async_compat::{Compat, CompatExt};
 use clap::Parser;
 use color_eyre::eyre::{self, WrapErr};
-use russh::{MethodSet, SshId};
-use russh_keys::key::{KeyPair, SignatureHash};
+use futures::{
+    io::{BufReader, BufWriter},
+    TryFutureExt,
+};
+use tokio::net::TcpStream;
 
 use crate::transport::GitConfig;
 
@@ -14,6 +19,8 @@ pub use connection::Connection;
 
 mod factory;
 pub use factory::Factory;
+
+pub type Socket = BufReader<BufWriter<Compat<TcpStream>>>;
 
 /// A lightweight, self-configured, ssh git remote.
 #[derive(Debug, Parser)]
@@ -37,8 +44,8 @@ pub struct Server {
 
 impl Server {
     /// Bind and start the server from the configuration.
-    pub async fn bind(mut self) -> eyre::Result<()> {
-        self.storage = self
+    pub async fn start(self) -> eyre::Result<()> {
+        let storage = self
             .storage
             .canonicalize()
             .wrap_err("Error reading the storage directory")?;
@@ -46,35 +53,23 @@ impl Server {
         let keys = match &self.keypair {
             keypairs if !keypairs.is_empty() => keypairs
                 .iter()
-                .map(|path| russh_keys::load_secret_key(path, None))
-                .collect::<Result<Vec<_>, russh_keys::Error>>()?,
+                .map(|path| server::PrivateKey::read_openssh_file(path).map_err(Into::into))
+                .collect::<Result<Vec<_>, assh::Error>>()?,
             _ => {
+                let mut rng = rand::thread_rng();
+
                 tracing::warn!("The server has been started without a keypair, random ones will be generated, this is unsafe for production !");
 
                 vec![
-                    KeyPair::generate_ed25519().ok_or(eyre::eyre!(
-                        "Unable to generate an ed25519 keypair for the server"
-                    ))?,
-                    KeyPair::generate_rsa(4096, SignatureHash::SHA2_512).ok_or(eyre::eyre!(
-                        "Unable to generate a rsa keypair for the server"
-                    ))?,
+                    server::PrivateKey::random(&mut rng, assh::algorithm::Key::Ed25519).map_err(
+                        |_| eyre::eyre!("Unable to generate an Ed25519 keypair for the server"),
+                    )?,
+                    // server::PrivateKey::random(&mut rng, assh::algorithm::Key::Rsa { hash: None })
+                    //     .map_err(|_| {
+                    //         eyre::eyre!("Unable to generate an RSA keypair for the server")
+                    //     })?,
                 ]
             }
-        };
-
-        let config = russh::server::Config {
-            server_id: SshId::Standard(format!(
-                "SSH-2.0-{}_{}",
-                env!("CARGO_PKG_NAME"),
-                env!("CARGO_PKG_VERSION")
-            )),
-            keys,
-            methods: MethodSet::PUBLICKEY,
-            auth_banner: self.banner.clone().map(|banner| &*banner.leak()),
-            auth_rejection_time: Duration::from_secs(3),
-            auth_rejection_time_initial: Some(Duration::ZERO),
-            inactivity_timeout: Some(Duration::from_secs(5)),
-            ..Default::default()
         };
 
         tracing::info!(
@@ -83,15 +78,41 @@ impl Server {
             self.storage.display()
         );
 
-        let gitconfig = GitConfig::new(&self.storage);
-        gitconfig.populate()?;
+        let factory = Box::leak(
+            Factory::new(
+                server::Server {
+                    id: server::Id::v2(
+                        concat!(env!("CARGO_PKG_NAME"), "_", env!("CARGO_PKG_VERSION")),
+                        None::<&str>,
+                    ),
+                    timeout: Duration::from_secs(3),
+                    keys,
+                    algorithms: Default::default(),
+                },
+                {
+                    let gitconfig = GitConfig::new(&self.storage);
+                    gitconfig.populate()?;
 
-        russh::server::run(
-            config.into(),
-            &*self.bind.clone().leak(),
-            Factory::new(self, gitconfig),
-        )
-        .await
-        .map_err(Into::into)
+                    gitconfig
+                },
+                storage,
+            )
+            .into(),
+        );
+
+        let listener = tokio::net::TcpListener::bind(&*self.bind).await?;
+        loop {
+            let (stream, addr) = listener.accept().await?;
+            let stream = BufReader::new(BufWriter::new(stream.compat()));
+
+            tokio::spawn(
+                factory
+                    .to_connection(stream, addr)
+                    .and_then(Connection::spin)
+                    .inspect_err(|err: &eyre::Error| {
+                        tracing::error!("Session with client ended up in an error: {err}")
+                    }),
+            );
+        }
     }
 }

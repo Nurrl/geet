@@ -1,33 +1,61 @@
-use std::sync::Arc;
+use std::{net::SocketAddr, path::PathBuf};
 
+use assh_auth::handler;
+use color_eyre::eyre;
+use tokio::sync::oneshot;
+
+use super::{server::Server, Connection, Socket};
 use crate::transport::GitConfig;
-
-use super::{Connection, Server};
 
 /// A factory creating [`Connection`] from the [`Server`] configuration.
 #[derive(Debug)]
 pub struct Factory {
-    server: Arc<Server>,
-    gitconfig: Arc<GitConfig>,
+    config: Server,
+    gitconfig: GitConfig,
+    storage: PathBuf,
 }
 
 impl Factory {
-    pub fn new(server: Server, gitconfig: GitConfig) -> Self {
+    pub fn new(config: Server, gitconfig: GitConfig, storage: PathBuf) -> Self {
         Self {
-            server: server.into(),
-            gitconfig: gitconfig.into(),
+            config,
+            gitconfig,
+            storage,
         }
     }
-}
 
-impl russh::server::Server for Factory {
-    type Handler = Connection;
+    pub async fn to_connection(
+        &self,
+        stream: Socket,
+        addr: SocketAddr,
+    ) -> eyre::Result<Connection<'_>> {
+        let session = assh::Session::new(stream, self.config.clone()).await?;
 
-    fn new_client(&mut self, addr: Option<std::net::SocketAddr>) -> Self::Handler {
-        Connection::new(
-            self.server.clone(),
-            self.gitconfig.clone(),
-            addr.expect("A client connected without an `addr`"),
-        )
+        let (sender, receiver) = oneshot::channel::<handler::publickey::PublicKey>();
+        let sender = &mut Some(sender);
+        let session = session
+            .handle(
+                handler::Auth::new(assh_connect::Service).publickey(|_, key| {
+                    sender
+                        .take()
+                        .expect("Sender has already been consumed at the time")
+                        .send(key)
+                        .ok();
+
+                    handler::publickey::Response::Accept
+                }),
+            )
+            .await?;
+        let key = receiver
+            .await
+            .expect("Unable to extract the key from the `publickey` authentication");
+
+        Ok(Connection::new(
+            session,
+            &self.gitconfig,
+            &self.storage,
+            addr,
+            key,
+        ))
     }
 }

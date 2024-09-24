@@ -14,22 +14,31 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.73"
+async-compat = "0.2.4"
 futures = "0.3.28"
-tokio = { version = "1.32.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.32.0", features = [
+    "rt-multi-thread",
+    "macros",
+    "net",
+    "process",
+    "sync",
+] }
 
 clap = { version = "4.4.2", features = ["derive", "env"] }
 thiserror = "1.0.48"
 color-eyre = "0.6.2"
-tracing = "0.1.37"
+tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.17", features = [
     "env-filter",
     "tracing-log",
 ] }
 
 git2 = { version = "0.18.0", default-features = false }
-russh = { version = "0.38.0", features = ["openssl"] }
-russh-keys = { version = "0.38.0", features = ["openssl"] }
-openssh-keys = "0.6.2"
+rand = "0.8.5"
+assh = "0.0.0"
+assh-auth = "0.0.0"
+assh-connect = "0.0.0"
+ssh-key = { version = "0.6.6", features = ["serde"] }
 
 strum = { version = "0.25.0", features = ["derive"] }
 parse-display = "0.8.2"
@@ -43,3 +52,8 @@ format_serde_error = "0.3.0"
 
 [dev-dependencies]
 rstest = "0.18.2"
+
+[patch.crates-io]
+assh = { git = "https://github.com/lowlevl/assh.git", rev = "6293818" }
+assh-auth = { git = "https://github.com/lowlevl/assh.git", rev = "6293818" }
+assh-connect = { git = "https://github.com/lowlevl/assh.git", rev = "6293818" }

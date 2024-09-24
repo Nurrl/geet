@@ -4,13 +4,13 @@ use std::{
     process::{ExitStatus, Output, Stdio},
 };
 
+use assh::{side::Side, Pipe};
+use assh_connect::channel::{request::Request, Channel};
+use async_compat::CompatExt;
 use color_eyre::eyre;
+use futures::{AsyncReadExt, AsyncWriteExt};
 use parse_display::{Display, FromStr};
-use russh::{server::Msg, Channel, ChannelMsg};
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    process::Command,
-};
+use tokio::process::Command;
 
 use crate::repository;
 
@@ -45,14 +45,15 @@ impl Service {
         &self,
         envs: impl IntoIterator<Item = (impl AsRef<OsStr>, impl AsRef<OsStr>)>,
         storage: &Path,
-        channel: &mut Channel<Msg>,
+        channel: &Channel<'_, impl Pipe, impl Side>,
+        request: Request<'_, impl Pipe, impl Side>,
     ) -> eyre::Result<ExitStatus> {
         let mut child = match self {
             Self::GitUploadPack { repository } => Command::new("git-upload-pack")
                 .env_clear()
                 .envs(envs)
                 .arg("--strict")
-                .arg("--timeout=1")
+                .arg("--timeout=3")
                 .arg(repository.to_path(storage))
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
@@ -71,67 +72,63 @@ impl Service {
         };
 
         let (mut stdin, mut stdout) = (
-            child.stdin.take(),
+            child.stdin.take().map(CompatExt::compat),
             child
                 .stdout
                 .take()
-                .expect("Unable to take service's `stdout` handle"),
+                .expect("Unable to take service's `stdout` handle")
+                .compat(),
         );
 
-        let mut done = false;
+        let (mut reader, mut writer) = (channel.as_reader(), channel.as_writer());
+        request.accept().await?;
+
         loop {
-            let mut buf = [0u8; 4096 * 8];
+            let mut buf1 = [0u8; 4096 * 8];
+            let mut buf2 = [0u8; 4096 * 8];
 
             tokio::select! {
-                read = stdout.read(&mut buf) => {
-                    let n = read?;
+                status = child.wait() => {
+                    status?;
 
-                    if n > 0 {
-                        channel.data(&buf[..n]).await?;
-                    } else {
-                        done = true;
+                    let Output { status, stderr, .. } = child.wait_with_output().await?;
+                    if !stderr.is_empty() {
+                        tracing::warn!(
+                            "Service additionnal output (code {}): {}",
+                            status.code().unwrap_or(i32::MAX),
+                            String::from_utf8_lossy(&stderr)
+                        );
+                    }
+
+                    break Ok(status);
+                }
+
+                inbound = reader.read(&mut buf1[..]) => {
+                    let n = inbound?;
+
+                    if n == 0 {
+                        drop(stdin.take());
+                    }
+
+                    if let Some(ref mut stdin) = stdin {
+                        stdin.write_all(&buf1[..n]).await?;
+                        stdin.flush().await?;
                     }
                 }
-                msg = channel.wait() => {
-                    tracing::trace!("Received channel message: {msg:?}");
 
-                    match msg {
-                        Some(ChannelMsg::Data { data }) => {
-                            if let Some(stdin) = &mut stdin {
-                                stdin.write_all(&data).await?;
-                            }
-                        }
-                        None | Some(ChannelMsg::Eof) => {
-                            if let Some(mut stdin) = stdin.take() {
-                                stdin.flush().await?;
+                outbound = stdout.read(&mut buf2[..]) => {
+                    let n = outbound?;
 
-                                drop(stdin);
-                            }
-                        },
-                        _ => ()
+                    if n == 0 {
+                        channel.eof().await?;
+                        continue;
                     }
-                }
-                _ = child.wait() => {
-                    drop(stdin.take());
-                }
-                // Exit the loop once everything is flushed
-                true = async { stdin.is_none() && done } => {
-                    break;
+
+                    writer.write_all(&buf2[..n]).await?;
+                    writer.flush().await?;
                 }
             }
         }
-
-        let Output { status, stderr, .. } = child.wait_with_output().await?;
-
-        if !stderr.is_empty() {
-            tracing::warn!(
-                "Service additionnal output (code {}): {}",
-                status.code().unwrap_or(i32::MAX),
-                String::from_utf8_lossy(&stderr)
-            );
-        }
-
-        Ok(status)
     }
 }
 

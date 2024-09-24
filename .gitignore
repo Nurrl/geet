@@ -14,3 +14,6 @@
 
 # pre-built charts
 *.tgz
+
+# local storage directory for tests
+.storage

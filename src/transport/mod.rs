@@ -8,6 +8,3 @@ pub use tunnel::Tunnel;
 
 mod gitconfig;
 pub use gitconfig::GitConfig;
-
-pub mod pkey;
-pub use pkey::PubKey;

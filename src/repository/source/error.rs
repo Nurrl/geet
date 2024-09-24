@@ -1,7 +1,5 @@
 use thiserror::Error;
 
-use crate::transport::pkey;
-
 #[cfg(doc)]
 use super::Source;
 
@@ -20,7 +18,4 @@ pub enum Error {
 
     #[error(transparent)]
     Utf8(#[from] std::str::Utf8Error),
-
-    #[error(transparent)]
-    Key(#[from] pkey::Error),
 }

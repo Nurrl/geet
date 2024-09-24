@@ -3,33 +3,33 @@ use std::{collections::HashMap, ops::Deref};
 use nonempty::{nonempty, NonEmpty};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
+use ssh_key::PublicKey;
 
 use super::Source;
-use crate::{
-    repository::{id::Base, Id},
-    transport::PubKey,
-};
+use crate::repository::{id::Base, Id};
 
 /// An [`Source`] residing in a _non-root_ namespace.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Namespace {
-    keys: NonEmpty<PubKey>,
+    keys: NonEmpty<PublicKey>,
 
     #[serde(default)]
     repositories: Vec<RepositoryConfig>,
 }
 
 impl Namespace {
-    pub fn init(key: PubKey) -> Self {
+    pub fn init(key: PublicKey) -> Self {
         Self {
             keys: nonempty![key],
             repositories: Default::default(),
         }
     }
 
-    pub fn has_key(&self, key: &PubKey) -> bool {
-        self.keys.iter().any(|k| k == key)
+    pub fn has_key(&self, key: &PublicKey) -> bool {
+        self.keys
+            .iter()
+            .any(|k| k.fingerprint(Default::default()) == key.fingerprint(Default::default()))
     }
 
     pub fn repository(&self, id: &Id) -> Option<&RepositoryConfig> {

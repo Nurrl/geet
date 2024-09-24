@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
+use ssh_key::PublicKey;
 
 use super::{namespace::Namespace, Source};
-use crate::transport::PubKey;
 
 /// An [`Source`] residing in the _origin_ namespace.
 #[derive(Debug, Serialize, Deserialize)]
@@ -15,7 +15,7 @@ pub struct Origin {
 }
 
 impl Origin {
-    pub fn init(key: PubKey) -> Self {
+    pub fn init(key: PublicKey) -> Self {
         Self {
             allow_registration: Default::default(),
             source: Namespace::init(key),

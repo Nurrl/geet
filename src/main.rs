@@ -26,7 +26,7 @@ async fn main() -> eyre::Result<()> {
                 .init();
 
             // Finally configure and start the server
-            server.bind().await
+            server.start().await
         }
         Cli::Hooks(hook) => hook.run().await,
     }
