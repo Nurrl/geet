@@ -1,53 +1,36 @@
-use std::{collections::HashMap, ops::Deref};
+use std::collections::HashMap;
 
-use nonempty::{nonempty, NonEmpty};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
-use ssh_key::PublicKey;
 
-use super::Source;
-use crate::repository::{id::Base, Id};
+use super::Entry;
+use crate::repository::id::Base;
 
-/// An [`Source`] residing in a _non-root_ namespace.
-#[derive(Debug, Serialize, Deserialize)]
+impl Entry<()> for Repositories {
+    const PATH: &'static str = "repositories.toml";
+}
+
+/// An [`Entry`] describing _repositories_ parameters.
+#[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Namespace {
-    keys: NonEmpty<PublicKey>,
-
+pub struct Repositories {
     #[serde(default)]
-    repositories: Vec<RepositoryConfig>,
+    pub repositories: HashMap<Base, Spec>,
+
 }
 
-impl Namespace {
-    pub fn init(key: PublicKey) -> Self {
-        Self {
-            keys: nonempty![key],
-            repositories: Default::default(),
-        }
-    }
-
-    pub fn has_key(&self, key: &PublicKey) -> bool {
-        self.keys
-            .iter()
-            .any(|k| k.fingerprint(Default::default()) == key.fingerprint(Default::default()))
-    }
-
-    pub fn repository(&self, id: &Id) -> Option<&RepositoryConfig> {
-        self.repositories
-            .iter()
-            .find(|repo| &repo.name == id.repository().deref())
+impl From<()> for Repositories {
+    fn from(_value: ()) -> Self {
+        Self::default()
     }
 }
 
-impl Source for Namespace {}
-
-/// The configuration for a repository, with some metadata
+/// The configuration for a _repositories_, with some metadata
 /// and some technical configuration.
 #[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct RepositoryConfig {
-    pub name: Base,
+pub struct Spec {
     pub description: Option<String>,
     pub license: Option<String>,
 
@@ -58,26 +41,27 @@ pub struct RepositoryConfig {
     #[serde_as(as = "Option<serde_with::DisplayFromStr>")]
     pub tags: Option<regex::Regex>,
 
-    #[serde(default)]
+    #[serde(default, rename = "ref")]
     pub branch: HashMap<String, RefConfig>,
 }
 
 /// Repository visibility level to a non-owner user.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "lowercase")]
 pub enum Visibility {
     /// Only repo owner can clone this repository.
     #[default]
     Private,
+
     /// Everyone can clone this repository.
     Public,
+
     /// Everyone can clone this repository, and the repository is read-only.
     Archive,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-
+#[serde(deny_unknown_fields)]
 pub struct RefConfig {
     pub allow_force: bool,
     pub allow_delete: bool,

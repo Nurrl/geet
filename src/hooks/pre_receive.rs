@@ -5,8 +5,9 @@ use futures::{io::AllowStdIo, TryStreamExt};
 
 use super::{Error, Params, Ref, RefUpdate};
 use crate::repository::{
-    id::Type,
-    source::{Namespace, Origin, Source},
+    authority::{GlobalAuthority, LocalAuthority},
+    entries::{Entry, Repositories},
+    id::Kind,
     Repository,
 };
 
@@ -39,8 +40,8 @@ impl PreReceive {
         let is_head = update.is_head(&repository)?;
         let is_delete = update.is_delete();
 
-        match id.as_type() {
-            Type::OriginSource(_) | Type::NamespaceSource(_) => {
+        match id.kind() {
+            Kind::GlobalAuthority | Kind::LocalAuthority => {
                 if is_delete {
                     return if is_head {
                         Err(Error::DeleteRef(update.refname))
@@ -49,16 +50,19 @@ impl PreReceive {
                         Ok(())
                     };
                 }
+
                 if !is_ff && is_head {
                     return Err(Error::NonFastForward(update.refname));
                 }
 
+                // Verify that entries in the repository are correctly
+                // formatted before allowing the push.
                 let res = if id.namespace().is_none() {
-                    Origin::read_commit(&repository, update.newrev)
+                    GlobalAuthority::load_at(&repository, update.newrev)
                         .map(|_| ())
                         .map_err(Error::from)
                 } else {
-                    Namespace::read_commit(&repository, update.newrev)
+                    LocalAuthority::load_at(&repository, update.newrev)
                         .map(|_| ())
                         .map_err(Error::from)
                 };
@@ -69,22 +73,15 @@ impl PreReceive {
                     res
                 }
             }
-            Type::Plain(id) => {
-                let source = Repository::open(storage, &id.to_source())?;
+            Kind::Normal => {
+                let repositories =
+                    Repositories::load(&Repository::open(storage, &id.to_authority())?)?;
+                let repository = repositories
+                    .repositories
+                    .get(id.repository())
+                    .expect("The repository is not defined in it's authority repository");
 
-                let config = if id.namespace().is_none() {
-                    Origin::read(&source)?
-                        .repository(id)
-                        .expect("The repository is not defined in it's source repository")
-                        .clone()
-                } else {
-                    Namespace::read(&source)?
-                        .repository(id)
-                        .expect("The repository is not defined in it's source repository")
-                        .clone()
-                };
-
-                match (&update.refname, &config.branches, &config.tags) {
+                match (&update.refname, &repository.branches, &repository.tags) {
                     (Ref::Branch(name), Some(regex), _) if !regex.is_match(name) => {
                         return Err(Error::IllegalRefName(name.into(), regex.clone()))?
                     }
@@ -95,7 +92,7 @@ impl PreReceive {
                 }
 
                 let refconfig = match &update.refname {
-                    Ref::Branch(name) => config.branch.get(name).cloned().unwrap_or_default(),
+                    Ref::Branch(name) => repository.branch.get(name).cloned().unwrap_or_default(),
                     Ref::Tag(_) => Default::default(),
                 };
 

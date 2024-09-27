@@ -6,7 +6,7 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 use super::Error;
 
 /// A valid base for either a namespace or a repository name.
-#[derive(Debug, Display, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
+#[derive(Debug, Display, Clone, PartialEq, Eq, Hash, DeserializeFromStr, SerializeDisplay)]
 pub struct Base(pub(crate) Cow<'static, str>);
 
 impl Base {

@@ -14,6 +14,13 @@ use tokio::process::Command;
 
 use crate::repository;
 
+/// A definition of what access the services requires to perform it's action.
+#[derive(Debug, PartialEq)]
+pub enum ServiceAccess {
+    Read,
+    Write,
+}
+
 /// A representation of the service request received from the git client,
 /// parsed from the command sent by git.
 #[derive(Debug, FromStr, Display)]
@@ -27,7 +34,7 @@ pub enum Service {
 }
 
 impl Service {
-    pub fn repository(&self) -> &repository::Id {
+    pub fn target(&self) -> &repository::Id {
         match self {
             Service::GitUploadPack { repository } => repository,
             Service::GitReceivePack { repository } => repository,
@@ -120,7 +127,6 @@ impl Service {
                     let n = outbound?;
 
                     if n == 0 {
-                        channel.eof().await?;
                         continue;
                     }
 
@@ -130,11 +136,4 @@ impl Service {
             }
         }
     }
-}
-
-/// A definition of what access the services requires to perform it's action.
-#[derive(Debug, PartialEq)]
-pub enum ServiceAccess {
-    Read,
-    Write,
 }

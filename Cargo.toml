@@ -47,8 +47,8 @@ regex = "1.9.5"
 
 serde = { version = "1.0.188", features = ["derive"] }
 serde_with = "3.3.0"
-serde_yaml = "0.8.26"
-format_serde_error = "0.3.0"
+
+toml = { version = "0.8.19", features = ["preserve_order"] }
 
 [dev-dependencies]
 rstest = "0.18.2"

@@ -1,7 +1,7 @@
 use regex::Regex;
 use thiserror::Error;
 
-use crate::repository::source;
+use crate::repository::entries;
 
 use super::Ref;
 
@@ -25,8 +25,8 @@ pub enum Error {
     #[error("The ref name `{0}` does not match {1}")]
     IllegalRefName(String, Regex),
 
-    #[error("Unable to parse source: {0}")]
-    SourceParse(#[from] source::Error),
+    #[error("Unable to parse entry: {0}")]
+    ConfigParse(#[from] entries::Error),
 
     #[error(transparent)]
     Git(#[from] git2::Error),

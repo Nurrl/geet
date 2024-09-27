@@ -5,7 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use super::SOURCE_REPOSITORY_NAME;
+use super::AUTHORITY_REPOSITORY_NAME;
 
 mod error;
 pub use error::Error;
@@ -15,6 +15,14 @@ pub use name::{Name, REPOSITORY_NAME_EXT};
 
 mod base;
 pub use base::Base;
+
+/// The repository type regarding it's [`Id`].
+#[derive(Debug, PartialEq, Eq)]
+pub enum Kind {
+    GlobalAuthority,
+    LocalAuthority,
+    Normal,
+}
 
 /// A repository [`Id`] is defined as a path without a leading `/`
 /// that does not contain any other component than [`path::Component::Normal`]
@@ -26,11 +34,11 @@ pub struct Id {
 }
 
 impl Id {
-    /// Get the [`Id`] of the origin source's repository.
-    pub fn origin() -> Self {
+    /// Get the [`Id`] of the _global authority_ repository.
+    pub fn global_authority() -> Self {
         Self {
             namespace: None,
-            repository: SOURCE_REPOSITORY_NAME,
+            repository: AUTHORITY_REPOSITORY_NAME,
         }
     }
 
@@ -42,24 +50,24 @@ impl Id {
         &self.repository
     }
 
-    pub fn as_type(&self) -> Type<'_> {
+    pub fn kind(&self) -> Kind {
         match &self.namespace {
-            None if self.is_source() => Type::OriginSource(self),
-            Some(_) if self.is_source() => Type::NamespaceSource(self),
-            _ => Type::Plain(self),
+            None if self.is_authority() => Kind::GlobalAuthority,
+            Some(_) if self.is_authority() => Kind::LocalAuthority,
+            _ => Kind::Normal,
         }
     }
 
-    pub fn is_source(&self) -> bool {
-        self.repository == SOURCE_REPOSITORY_NAME
+    pub fn is_authority(&self) -> bool {
+        self.repository == AUTHORITY_REPOSITORY_NAME
     }
 
-    /// Constructs the source repository [`Id`]
+    /// Constructs the config repository [`Id`]
     /// from the current `namespace`:`repository` couple.
-    pub fn to_source(&self) -> Self {
+    pub fn to_authority(&self) -> Self {
         Self {
             namespace: self.namespace.clone(),
-            repository: SOURCE_REPOSITORY_NAME,
+            repository: AUTHORITY_REPOSITORY_NAME,
         }
     }
 
@@ -93,13 +101,6 @@ impl FromStr for Id {
             repository,
         })
     }
-}
-
-/// The repository type regarding it's [`Id`].
-pub enum Type<'i> {
-    OriginSource(&'i Id),
-    NamespaceSource(&'i Id),
-    Plain(&'i Id),
 }
 
 impl std::fmt::Display for Id {

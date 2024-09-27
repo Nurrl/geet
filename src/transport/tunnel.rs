@@ -16,8 +16,9 @@ use futures::TryStreamExt;
 use crate::{
     hooks::Hooks,
     repository::{
-        id::Type,
-        source::{Namespace, Origin, Source, Visibility},
+        authority::{GlobalAuthority, LocalAuthority},
+        entries::{RegistrationPolicy, Visibility},
+        id::Kind,
         Id, Repository,
     },
     server::Socket,
@@ -115,74 +116,64 @@ impl<'f> Tunnel<'f> {
     ) -> eyre::Result<()> {
         tracing::info!("Received new service request: {service}");
 
-        // Open the `origin` repository or create it if non-existant.
-        let repository = Repository::open(self.storage, &Id::origin())
-            .or_else(|_| Repository::init(self.storage, &Id::origin()))?;
+        // Open the global authority repository.
+        let global = Repository::open(self.storage, &Id::global_authority())
+            .or_else(|_| Repository::init(self.storage, &Id::global_authority()))?;
 
-        // Load the source or initialize it.
-        let origin = Origin::read(&repository).or_else(|_| {
-            let source = Origin::init(self.key.clone());
+        // Load or init the global authority from the repository.
+        let authority = GlobalAuthority::load(&global, self.key)?;
 
-            source
-                .commit(&repository, "Source repository initialization")
-                .map(|_| source)
-        })?;
+        // Automatically create the local authority repository if self-registration
+        // is allowed or the requester is from the global authority keychain.
+        if service.target().kind() == Kind::LocalAuthority
+            && (authority.global.registration == RegistrationPolicy::Allow
+                || authority.local.keychain.contains(self.key))
+        {
+            Repository::open(self.storage, service.target())
+                .or_else(|_| Repository::init(self.storage, service.target()))?;
+        }
 
-        let allowed = match service.repository().as_type() {
-            Type::OriginSource(_) => origin.has_key(self.key),
-            Type::NamespaceSource(id) => {
-                let namespace = if origin.allow_registration()
-                    || (!origin.allow_registration() && origin.has_key(self.key))
-                {
-                    // Auto-create and initialize the namespace source repository if:
-                    // - The auto-registration is enabled
-                    // - The auto-registration is disabled, but the user is owner on the origin repository
-
-                    let repository = Repository::open(self.storage, id)
-                        .or_else(|_| Repository::init(self.storage, id))?;
-
-                    Namespace::read(&repository).or_else(|_| {
-                        let source = Namespace::init(self.key.clone());
-
-                        source
-                            .commit(&repository, "Source repository initialization")
-                            .map(|_| source)
-                    })?
-                } else {
-                    Namespace::read(&Repository::open(self.storage, id)?)?
-                };
-
-                namespace.has_key(self.key)
+        // Load or init the target authority from the repository.
+        let authority = match service.target().kind() {
+            Kind::GlobalAuthority => authority.local,
+            _ => {
+                let repository = Repository::open(self.storage, &service.target().to_authority())?;
+                LocalAuthority::load(&repository, self.key)?
             }
-            Type::Plain(id) => {
-                let source = Namespace::read(&Repository::open(self.storage, &id.to_source())?)?;
+        };
 
-                let config = source
-                    .repository(id)
-                    .ok_or_else(|| eyre::eyre!("Missing repository definition for `{id}`"))?;
+        let allowed = if service.target().is_authority() {
+            authority.keychain.contains(self.key)
+        } else {
+            let repository = authority
+                .repositories
+                .repositories
+                .get(service.target().repository())
+                .ok_or_else(|| {
+                    eyre::eyre!("Missing repository definition for `{}`", service.target())
+                })?;
 
-                let allowed = match config.visibility {
-                    Visibility::Private => source.has_key(self.key),
-                    Visibility::Public => {
-                        service.access() == ServiceAccess::Read || source.has_key(self.key)
-                    }
-                    Visibility::Archive => service.access() == ServiceAccess::Read,
-                };
-
-                if allowed {
-                    // Create the repository if non-existant
-                    Repository::open(self.storage, id)
-                        .or_else(|_| Repository::init(self.storage, id))?;
+            let allowed = match repository.visibility {
+                Visibility::Private => authority.keychain.contains(self.key),
+                Visibility::Public => {
+                    service.access() == ServiceAccess::Read || authority.keychain.contains(self.key)
                 }
+                Visibility::Archive => service.access() == ServiceAccess::Read,
+            };
 
-                allowed
+            if allowed {
+                // Create the target repository if non-existant.
+                Repository::open(self.storage, service.target())
+                    .or_else(|_| Repository::init(self.storage, service.target()))?;
             }
+
+            allowed
         };
 
         if allowed {
             // Install our server-side hooks and inject env variables
-            Hooks::install(self.storage, service.repository())?;
-            Hooks::env(&mut envs, self.storage, service.repository());
+            Hooks::install(self.storage, service.target())?;
+            Hooks::env(&mut envs, self.storage, service.target());
 
             // Install our own `.gitconfig`
             self.gitconfig.env(&mut envs);
@@ -204,7 +195,9 @@ impl<'f> Tunnel<'f> {
 
             Ok(())
         } else {
-            Err(eyre::eyre!("Unauthorized access to the repository"))
+            request.accept().await?;
+
+            Err(eyre::eyre!("The access to the repository has been denied"))
         }
     }
 }
