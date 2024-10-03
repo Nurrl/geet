@@ -5,7 +5,7 @@ use ssh_key::PublicKey;
 use super::Entry;
 
 impl Entry<&PublicKey> for Keychain {
-    const PATH: &'static str = "keychain.toml";
+    const PATH: &'static str = "Keychain.toml";
 }
 
 /// An [`Entry`] describing _keys_ for the namespace.

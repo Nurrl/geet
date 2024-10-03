@@ -17,12 +17,12 @@ mod keychain;
 pub use keychain::Keychain;
 
 mod repositories;
-pub use repositories::{Repositories, Visibility};
+pub use repositories::{RefConfig, Repositories, Visibility};
 
 /// The trait representing an [`Entry`],
 /// which allows R/W operations on a repository storing those kind of informations.
 pub trait Entry<Args>: Serialize + DeserializeOwned + From<Args> {
-    /// The in-repository path to the file for this [`Entry`].
+    /// The in-repository path for this [`Entry`].
     const PATH: &'static str;
 
     /// Load the [`Entry`] from the repository's `HEAD`.

@@ -7,7 +7,7 @@ use super::Entry;
 use crate::repository::id::Base;
 
 impl Entry<()> for Repositories {
-    const PATH: &'static str = "repositories.toml";
+    const PATH: &'static str = "Repositories.toml";
 }
 
 /// An [`Entry`] describing _repositories_ parameters.
@@ -16,7 +16,6 @@ impl Entry<()> for Repositories {
 pub struct Repositories {
     #[serde(default)]
     pub repositories: HashMap<Base, Spec>,
-
 }
 
 impl From<()> for Repositories {
@@ -29,7 +28,7 @@ impl From<()> for Repositories {
 /// and some technical configuration.
 #[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[serde(deny_unknown_fields)]
 pub struct Spec {
     pub description: Option<String>,
     pub license: Option<String>,
@@ -41,7 +40,7 @@ pub struct Spec {
     #[serde_as(as = "Option<serde_with::DisplayFromStr>")]
     pub tags: Option<regex::Regex>,
 
-    #[serde(default, rename = "ref")]
+    #[serde(default)]
     pub branch: HashMap<String, RefConfig>,
 }
 
@@ -61,7 +60,7 @@ pub enum Visibility {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct RefConfig {
     pub allow_force: bool,
     pub allow_delete: bool,
@@ -74,13 +73,17 @@ impl RefConfig {
             allow_delete: false,
         }
     }
-}
 
-impl Default for RefConfig {
-    fn default() -> Self {
+    pub fn unprotected() -> Self {
         Self {
             allow_force: true,
             allow_delete: true,
         }
+    }
+}
+
+impl Default for RefConfig {
+    fn default() -> Self {
+        Self::unprotected()
     }
 }

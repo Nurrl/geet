@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use super::Entry;
 
 impl Entry<()> for Global {
-    const PATH: &'static str = "global.toml";
+    const PATH: &'static str = "Global.toml";
 }
 
 /// An [`Entry`] describing _global_ parameters.

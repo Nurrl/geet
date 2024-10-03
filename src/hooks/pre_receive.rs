@@ -6,7 +6,7 @@ use futures::{io::AllowStdIo, TryStreamExt};
 use super::{Error, Params, Ref, RefUpdate};
 use crate::repository::{
     authority::{GlobalAuthority, LocalAuthority},
-    entries::{Entry, Repositories},
+    entries::{Entry, RefConfig, Repositories},
     id::Kind,
     Repository,
 };
@@ -79,7 +79,7 @@ impl PreReceive {
                 let repository = repositories
                     .repositories
                     .get(id.repository())
-                    .expect("The repository is not defined in it's authority repository");
+                    .expect("Major failure: The repository is not defined in it's authority repository, how did we get here in the first place ?");
 
                 match (&update.refname, &repository.branches, &repository.tags) {
                     (Ref::Branch(name), Some(regex), _) if !regex.is_match(name) => {
@@ -93,7 +93,7 @@ impl PreReceive {
 
                 let refconfig = match &update.refname {
                     Ref::Branch(name) => repository.branch.get(name).cloned().unwrap_or_default(),
-                    Ref::Tag(_) => Default::default(),
+                    Ref::Tag(_) => RefConfig::unprotected(),
                 };
 
                 if !refconfig.allow_delete && is_delete {
