@@ -121,7 +121,7 @@ impl<'f> Tunnel<'f> {
             .or_else(|_| Repository::init(self.storage, &Id::global_authority()))?;
 
         // Load or init the global authority from the repository.
-        let authority = GlobalAuthority::load(&global, self.key)?;
+        let authority = GlobalAuthority::load_or_init(&global, self.key)?;
 
         // Automatically create the local authority repository if self-registration
         // is allowed or the requester is from the global authority keychain.
@@ -138,7 +138,7 @@ impl<'f> Tunnel<'f> {
             Kind::GlobalAuthority => authority.local,
             _ => {
                 let repository = Repository::open(self.storage, &service.target().to_authority())?;
-                LocalAuthority::load(&repository, self.key)?
+                LocalAuthority::load_or_init(&repository, self.key)?
             }
         };
 

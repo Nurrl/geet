@@ -25,8 +25,8 @@ pub enum Error {
     #[error("The ref name `{0}` does not match {1}")]
     IllegalRefName(String, Regex),
 
-    #[error("Unable to parse entry: {0}")]
-    ConfigParse(#[from] entries::Error),
+    #[error("Unable to parse {0}")]
+    EntryParse(#[from] entries::Error),
 
     #[error(transparent)]
     Git(#[from] git2::Error),

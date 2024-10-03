@@ -12,10 +12,10 @@ pub struct GlobalAuthority {
 }
 
 impl GlobalAuthority {
-    pub fn load(repository: &Repository, key: &PublicKey) -> Result<Self, entries::Error> {
+    pub fn load_or_init(repository: &Repository, key: &PublicKey) -> Result<Self, entries::Error> {
         Ok(Self {
             global: Global::load_or_init(repository, ())?,
-            local: LocalAuthority::load(repository, key)?,
+            local: LocalAuthority::load_or_init(repository, key)?,
         })
     }
 
@@ -33,7 +33,7 @@ pub struct LocalAuthority {
 }
 
 impl LocalAuthority {
-    pub fn load(repository: &Repository, key: &PublicKey) -> Result<Self, entries::Error> {
+    pub fn load_or_init(repository: &Repository, key: &PublicKey) -> Result<Self, entries::Error> {
         Ok(Self {
             keychain: Keychain::load_or_init(repository, key)?,
             repositories: Repositories::load_or_init(repository, ())?,

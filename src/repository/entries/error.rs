@@ -1,12 +1,31 @@
 use thiserror::Error;
 
-#[cfg(doc)]
 use super::Entry;
 
-/// An [`enum@Error`] that can occur while manipulating an [`Source`].
+/// An [`struct@Error`] that can occur while manipulating an [`Entry`].
 #[derive(Debug, Error)]
+#[error("`{path}`: {inner}")]
+pub struct Error {
+    path: &'static str,
+    inner: ErrorKind,
+}
 
-pub enum Error {
+impl Error {
+    pub fn new<A, T: Entry<A>>(inner: impl Into<ErrorKind>) -> Self {
+        Self {
+            path: T::PATH,
+            inner: inner.into(),
+        }
+    }
+
+    pub fn kind(&self) -> &ErrorKind {
+        &self.inner
+    }
+}
+
+/// The kind of [`struct@Error`]s that can occur while manipulating an [`Entry`].
+#[derive(Debug, Error)]
+pub enum ErrorKind {
     #[error("Git error: {0}")]
     Git(#[from] git2::Error),
 
