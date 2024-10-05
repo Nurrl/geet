@@ -133,8 +133,8 @@ mod tests {
         Id { namespace: Some(Base("user".into())), repository: Name(Base("repo".into())) })]
     #[case("//user/repo.git",
         Id { namespace: Some(Base("user".into())), repository: Name(Base("repo".into())) })]
-    #[case("?.git",
-            Id { namespace: None, repository: Name(Base("?".into())) })]
+    #[case("_.git",
+            Id { namespace: None, repository: Name(Base("_".into())) })]
     fn it_allows_valid_repositories(#[case] path: &str, #[case] expected: Id) {
         let path = Id::from_str(path).expect(path);
 
@@ -151,6 +151,7 @@ mod tests {
     #[case("./repo.git")]
     #[case("user/../repo.git")]
     #[case("/user/repo")]
+    #[case("/user.git/repo.git")]
     #[case("/repo")]
     #[case("..git")]
     #[case("toto/..git")]

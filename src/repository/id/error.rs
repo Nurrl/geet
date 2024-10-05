@@ -7,18 +7,21 @@ use super::{Base, Id, Name};
 /// of [`Id`]s, [`Name`]s or [`Base`]s.
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("The name is either empty or too long")]
+    #[error("A basename may not be empty or longer than 255 characters")]
     IllegalSize,
 
-    #[error("A name cannot start or end with `.`")]
+    #[error("A basename may not start or end with `.`")]
     IllegalDot,
 
-    #[error("A name may only contain [a-zA-Z0-9-_?.]")]
+    #[error("A basename may only contain [a-zA-Z0-9-_.]")]
     IllegalFormat,
+
+    #[error("A basename may not end in `.git`")]
+    IllegalExtension,
 
     #[error("The path must comply with the following format: `[<namespace>/]<name>.git`")]
     MisformattedPath,
 
-    #[error("The repository name must include the `{0}` extension")]
+    #[error("The name must include the `{0}` extension")]
     MissingExt(&'static str),
 }
