@@ -1,14 +1,14 @@
 //! Types and structs related to _repositories & authorities_.
 
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
 use git2::RepositoryOpenFlags;
 
-/// Defines the default git `HEAD` ref when creating a new repository.
-pub const DEFAULT_HEAD_REF: &str = "refs/heads/main";
+/// Defines the default git branch name.
+pub const DEFAULT_BRANCH: &str = "main";
 
 /// The name of the config repositories.
-pub const AUTHORITY_REPOSITORY_NAME: id::Name = id::Name(id::Base(std::borrow::Cow::Borrowed("?")));
+pub const AUTHORITY_REPOSITORY_NAME: id::Name = id::Name(id::Base(Cow::Borrowed("_")));
 
 pub mod id;
 pub use id::Id;
@@ -25,7 +25,7 @@ impl Repository {
     /// Initialize the repository pointed by the [`Id`] in the `storage` path.
     pub fn init(storage: &Path, id: &Id) -> Result<Self, git2::Error> {
         let repository = git2::Repository::init_bare(id.to_path(storage))?;
-        repository.set_head(DEFAULT_HEAD_REF)?;
+        repository.set_head(&format!("refs/heads/{DEFAULT_BRANCH}"))?;
 
         Ok(Self { inner: repository })
     }

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
 
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -15,7 +15,7 @@ impl Entry<()> for Repositories {
 #[serde(deny_unknown_fields)]
 pub struct Repositories {
     #[serde(default)]
-    pub repositories: HashMap<Base, Spec>,
+    repositories: HashMap<Base, Spec>,
 }
 
 impl From<()> for Repositories {
@@ -42,6 +42,14 @@ pub struct Spec {
 
     #[serde(default)]
     pub branch: HashMap<String, RefConfig>,
+}
+
+impl Deref for Repositories {
+    type Target = HashMap<Base, Spec>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.repositories
+    }
 }
 
 /// Repository visibility level to a non-owner user.

@@ -3,6 +3,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::repository::DEFAULT_BRANCH;
+
 /// A handle to a `.gitconfig` file for our remote.
 #[derive(Debug)]
 pub struct GitConfig {
@@ -20,6 +22,9 @@ impl GitConfig {
     }
 
     /// Populate the gitconfig file with the following settings.
+    ///
+    /// - `init.defaultBranch`: [`DEFAULT_BRANCH`]
+    ///   Makes `git` aware that we have a different branch set-up as default branch.
     ///
     /// - `receive.keepAlive`: `3`
     ///   Send a keep-alive every `n` seconds, to prevent the server timing out.
@@ -39,9 +44,11 @@ impl GitConfig {
             self.path.display()
         );
 
+        config.set_str("init.defaultBranch", DEFAULT_BRANCH)?;
+
         config.set_i32("receive.keepAlive", 3)?;
         config.set_bool("receive.fsckObjects", true)?;
-        config.set_bool("receive.denyDeleteCurrent", false)?;
+        config.set_str("receive.denyDeleteCurrent", "ignore")?;
 
         Ok(())
     }

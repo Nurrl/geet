@@ -8,7 +8,7 @@ use crate::repository::{
     authority::{GlobalAuthority, LocalAuthority},
     entries::{Entry, RefConfig, Repositories},
     id::Kind,
-    Repository,
+    Id, Repository,
 };
 
 /// The first script to run when handling a push from a client is pre-receive.
@@ -57,27 +57,40 @@ impl PreReceive {
 
                 // Verify that entries in the repository are correctly
                 // formatted before allowing the push.
-                let res = if id.namespace().is_none() {
-                    GlobalAuthority::load_at(&repository, update.newrev)
-                        .map(|_| ())
-                        .map_err(Error::from)
+                let new = if id.namespace().is_none() {
+                    GlobalAuthority::load_at(&repository, update.newrev).map(|global| global.local)
                 } else {
                     LocalAuthority::load_at(&repository, update.newrev)
-                        .map(|_| ())
-                        .map_err(Error::from)
-                };
-
-                if !is_head {
-                    res.map_err(Error::into_hint)
-                } else {
-                    res
                 }
+                .map_err(|err| {
+                    if !is_head {
+                        Error::hint(err)
+                    } else {
+                        Error::from(err)
+                    }
+                })?;
+                let old = LocalAuthority::load_at(&repository, update.oldrev)?;
+
+                // Iterate over deleted repositories entries to ensure the repositories are empty.
+                for deleted in old
+                    .repositories
+                    .keys()
+                    .filter(|key| !new.repositories.contains_key(key))
+                {
+                    let id = Id::new(id.namespace().cloned(), deleted.clone());
+                    let repository = Repository::open_from_hook(storage, &id)?;
+
+                    if !repository.is_empty()? {
+                        return Err(Error::NonEmptyRepository(id));
+                    }
+                }
+
+                Ok(())
             }
             Kind::Normal => {
                 let repositories =
                     Repositories::load(&Repository::open(storage, &id.to_authority())?)?;
                 let repository = repositories
-                    .repositories
                     .get(id.repository())
                     .expect("Major failure: The repository is not defined in it's authority repository, how did we get here in the first place ?");
 

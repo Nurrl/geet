@@ -34,6 +34,13 @@ pub struct Id {
 }
 
 impl Id {
+    pub fn new(namespace: Option<Base>, repository: impl Into<Name>) -> Self {
+        Self {
+            namespace,
+            repository: repository.into(),
+        }
+    }
+
     /// Get the [`Id`] of the _global authority_ repository.
     pub fn global_authority() -> Self {
         Self {
@@ -42,8 +49,8 @@ impl Id {
         }
     }
 
-    pub fn namespace(&self) -> Option<&str> {
-        self.namespace.as_deref()
+    pub fn namespace(&self) -> Option<&Base> {
+        self.namespace.as_ref()
     }
 
     pub fn repository(&self) -> &Name {

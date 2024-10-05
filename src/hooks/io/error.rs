@@ -1,7 +1,7 @@
 use regex::Regex;
 use thiserror::Error;
 
-use crate::repository::entries;
+use crate::repository::{entries, Id};
 
 use super::Ref;
 
@@ -24,6 +24,11 @@ pub enum Error {
 
     #[error("The ref name `{0}` does not match {1}")]
     IllegalRefName(String, Regex),
+
+    #[error(
+        "The repository `{0}` is not empty, please remove all branches and tags before proceeding"
+    )]
+    NonEmptyRepository(Id),
 
     #[error("Unable to parse {0}")]
     EntryParse(#[from] entries::Error),
@@ -55,7 +60,7 @@ impl Error {
 
     /// Transforms the error into a _hint_,
     /// effectively rendering it non-fatal.
-    pub fn into_hint(self) -> Self {
-        Self::Hint(self.into())
+    pub fn hint(err: impl Into<Self>) -> Self {
+        Self::Hint(err.into().into())
     }
 }

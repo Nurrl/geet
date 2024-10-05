@@ -147,7 +147,6 @@ impl<'f> Tunnel<'f> {
         } else {
             let repository = authority
                 .repositories
-                .repositories
                 .get(service.target().repository())
                 .ok_or_else(|| {
                     eyre::eyre!("Missing repository definition for `{}`", service.target())

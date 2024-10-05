@@ -7,6 +7,12 @@ pub const REPOSITORY_NAME_EXT: &str = ".git";
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Name(pub(crate) Base);
 
+impl From<Base> for Name {
+    fn from(value: Base) -> Self {
+        Self(value)
+    }
+}
+
 impl std::str::FromStr for Name {
     type Err = Error;
 

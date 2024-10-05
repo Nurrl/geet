@@ -75,7 +75,7 @@ impl Server {
         tracing::info!(
             "Starting up the `{}` daemon in `{}`..",
             env!("CARGO_PKG_NAME"),
-            self.storage.display()
+            storage.display()
         );
 
         let factory = Box::leak(
@@ -90,7 +90,7 @@ impl Server {
                     algorithms: Default::default(),
                 },
                 {
-                    let gitconfig = GitConfig::new(&self.storage);
+                    let gitconfig = GitConfig::new(&storage);
                     gitconfig.populate()?;
 
                     gitconfig
