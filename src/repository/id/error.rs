@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+use super::base::AUTHORIZED_NAMES;
 #[cfg(doc)]
 use super::{Base, Id, Name};
 
@@ -13,7 +14,7 @@ pub enum Error {
     #[error("A basename may not start or end with `.`")]
     IllegalDot,
 
-    #[error("A basename may only contain [a-zA-Z0-9-_.]")]
+    #[error("A basename may only match `{}`", *AUTHORIZED_NAMES)]
     IllegalFormat,
 
     #[error("A basename may not end in `.git`")]

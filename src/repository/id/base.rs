@@ -1,19 +1,17 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::LazyLock};
 
 use parse_display::Display;
+use regex::Regex;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 use super::Error;
 
+pub static AUTHORIZED_NAMES: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-z0-9-_.]*$").unwrap());
+
 /// A valid base for either a namespace or a repository name.
 #[derive(Debug, Display, Clone, PartialEq, Eq, Hash, DeserializeFromStr, SerializeDisplay)]
 pub struct Base(pub(crate) Cow<'static, str>);
-
-impl Base {
-    fn is_authorized(c: char) -> bool {
-        matches!(c, '0'..='9' | 'a'..='z' | '_' | '-' | '.')
-    }
-}
 
 impl std::str::FromStr for Base {
     type Err = Error;
@@ -33,7 +31,7 @@ impl std::str::FromStr for Base {
             return Err(Error::IllegalExtension);
         }
 
-        if !s.chars().all(Self::is_authorized) {
+        if !AUTHORIZED_NAMES.is_match(&s) {
             return Err(Error::IllegalFormat);
         }
 

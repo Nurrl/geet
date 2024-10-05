@@ -90,8 +90,7 @@ impl<'f> Tunnel<'f> {
                         str::from_utf8(command).wrap_err("Received a non-utf8 service request")?;
                     let service = command
                         .parse()
-                        .wrap_err("Received an illegal service request")
-                        .wrap_err_with(|| command.to_string())?;
+                        .wrap_err_with(|| format!("Unable to parse service-request: {command}"))?;
 
                     if let Err(err) = self.exec(service, envs, request).await {
                         tracing::warn!("Unable to process service request: {err:#}")
