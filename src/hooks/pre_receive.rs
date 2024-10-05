@@ -55,37 +55,33 @@ impl PreReceive {
                     return Err(Error::NonFastForward(update.refname));
                 }
 
-                // Verify that entries in the repository are correctly
-                // formatted before allowing the push.
-                let new = if id.namespace().is_none() {
-                    GlobalAuthority::load_at(&repository, update.newrev).map(|global| global.local)
-                } else {
-                    LocalAuthority::load_at(&repository, update.newrev)
-                }
-                .map_err(|err| {
-                    if !is_head {
-                        Error::hint(err)
+                (|| {
+                    // Verify that entries in the repository are correctly
+                    // formatted before allowing the push and extract it's repositories list.
+                    let new = if id.namespace().is_none() {
+                        GlobalAuthority::load_at(&repository, update.newrev)
+                            .map(|global| global.local.repositories)
                     } else {
-                        Error::from(err)
+                        LocalAuthority::load_at(&repository, update.newrev)
+                            .map(|local| local.repositories)
+                    }?;
+
+                    // Load the current repositories list from the HEAD.
+                    let current = Repositories::load(&repository)?;
+
+                    // Iterate over deleted repositories entries to ensure the repositories are empty.
+                    for repository in current.keys().filter(|key| !new.contains_key(key)) {
+                        let id = Id::new(id.namespace().cloned(), repository.clone());
+                        let repository = Repository::open_from_hook(storage, &id)?;
+
+                        if !repository.is_empty()? {
+                            return Err(Error::NonEmptyRepository(id));
+                        }
                     }
-                })?;
-                let old = LocalAuthority::load_at(&repository, update.oldrev)?;
 
-                // Iterate over deleted repositories entries to ensure the repositories are empty.
-                for deleted in old
-                    .repositories
-                    .keys()
-                    .filter(|key| !new.repositories.contains_key(key))
-                {
-                    let id = Id::new(id.namespace().cloned(), deleted.clone());
-                    let repository = Repository::open_from_hook(storage, &id)?;
-
-                    if !repository.is_empty()? {
-                        return Err(Error::NonEmptyRepository(id));
-                    }
-                }
-
-                Ok(())
+                    Ok(())
+                })()
+                .map_err(|err| if !is_head { err.into_hint() } else { err })
             }
             Kind::Normal => {
                 let repositories =

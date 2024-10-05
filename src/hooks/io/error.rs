@@ -16,18 +16,16 @@ pub enum Error {
     #[error("Unable to process ref update: {0}")]
     RefUpdateParse(parse_display::ParseError),
 
-    #[error("Ref `{0}` may not be deleted")]
+    #[error("Ref `{0}` may not be deleted.")]
     DeleteRef(Ref),
 
-    #[error("Non fast-forward updates are disabled on `{0}`")]
+    #[error("Non fast-forward updates are disabled on `{0}`.")]
     NonFastForward(Ref),
 
-    #[error("The ref name `{0}` does not match {1}")]
+    #[error("The ref name `{0}` does not match {1}.")]
     IllegalRefName(String, Regex),
 
-    #[error(
-        "The repository `{0}` is not empty, please remove all branches and tags before proceeding"
-    )]
+    #[error("The repository `{0}` is not empty, and thus cannot be removed.")]
     NonEmptyRepository(Id),
 
     #[error("Unable to parse {0}")]
@@ -60,7 +58,7 @@ impl Error {
 
     /// Transforms the error into a _hint_,
     /// effectively rendering it non-fatal.
-    pub fn hint(err: impl Into<Self>) -> Self {
-        Self::Hint(err.into().into())
+    pub fn into_hint(self) -> Self {
+        Self::Hint(self.into())
     }
 }
