@@ -11,7 +11,7 @@ pub struct Base(pub(crate) Cow<'static, str>);
 
 impl Base {
     fn is_authorized(c: char) -> bool {
-        matches!(c, '0'..='9' | 'A'..='Z' | 'a'..='z' | '_' | '-' | '.')
+        matches!(c, '0'..='9' | 'a'..='z' | '_' | '-' | '.')
     }
 }
 
@@ -19,6 +19,8 @@ impl std::str::FromStr for Base {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.to_ascii_lowercase();
+
         if s.is_empty() || s.len() > 255 {
             return Err(Error::IllegalSize);
         }
@@ -35,7 +37,7 @@ impl std::str::FromStr for Base {
             return Err(Error::IllegalFormat);
         }
 
-        Ok(Self(s.to_string().into()))
+        Ok(Self(s.into()))
     }
 }
 
