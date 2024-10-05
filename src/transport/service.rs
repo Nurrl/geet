@@ -90,50 +90,55 @@ impl Service {
         let (mut reader, mut writer) = (channel.as_reader(), channel.as_writer());
         request.accept().await?;
 
-        loop {
-            let mut buf1 = [0u8; 4096 * 8];
-            let mut buf2 = [0u8; 4096 * 8];
+        let (status, _, _) = tokio::try_join!(
+            // Wait for `child process` to exit.
+            async move {
+                let Output { status, stderr, .. } = child.wait_with_output().await?;
 
-            tokio::select! {
-                status = child.wait() => {
-                    status?;
-
-                    let Output { status, stderr, .. } = child.wait_with_output().await?;
-                    if !stderr.is_empty() {
-                        tracing::warn!(
-                            "Service additionnal output (code {}): {}",
-                            status.code().unwrap_or(i32::MAX),
-                            String::from_utf8_lossy(&stderr)
-                        );
-                    }
-
-                    break Ok(status);
+                if !stderr.is_empty() {
+                    tracing::warn!(
+                        "Service additionnal output (code {}): {}",
+                        status.code().unwrap_or(i32::MAX),
+                        String::from_utf8_lossy(&stderr)
+                    );
                 }
 
-                inbound = reader.read(&mut buf1[..]) => {
-                    let n = inbound?;
+                Ok::<_, eyre::Error>(status)
+            },
+            // Process `peer -> child process` communication.
+            async move {
+                let mut buf = [0u8; 4096 * 8];
 
+                loop {
+                    let n = reader.read(&mut buf[..]).await?;
                     if n == 0 {
                         drop(stdin.take());
+
+                        break Ok(());
                     }
 
                     if let Some(ref mut stdin) = stdin {
-                        stdin.write_all(&buf1[..n]).await?;
+                        stdin.write_all(&buf[..n]).await?;
                         stdin.flush().await?;
                     }
                 }
+            },
+            // Process `child process -> peer` communication.
+            async move {
+                let mut buf = [0u8; 4096 * 8];
 
-                outbound = stdout.read(&mut buf2[..]) => {
-                    let n = outbound?;
-
+                loop {
+                    let n = stdout.read(&mut buf[..]).await?;
                     if n == 0 {
-                        continue;
+                        break Ok(());
                     }
 
-                    writer.write_all(&buf2[..n]).await?;
+                    writer.write_all(&buf[..n]).await?;
                     writer.flush().await?;
                 }
             }
-        }
+        )?;
+
+        Ok(status)
     }
 }
