@@ -72,7 +72,10 @@ impl PreReceive {
                     // Iterate over deleted repositories entries to ensure the repositories are empty.
                     for repository in current.keys().filter(|key| !new.contains_key(key)) {
                         let id = Id::new(id.namespace().cloned(), repository.clone());
-                        let repository = Repository::open_from_hook(storage, &id)?;
+                        let repository = match Repository::open_from_hook(storage, &id) {
+                            Err(err) if err.code() == git2::ErrorCode::NotFound => continue,
+                            other => other?,
+                        };
 
                         if !repository.is_empty()? {
                             return Err(Error::NonEmptyRepository(id));

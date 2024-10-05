@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ops::Deref};
 
 use serde::{Deserialize, Serialize};
-use serde_with::serde_as;
+use serde_with::{serde_as, MapPreventDuplicates};
 
 use super::Entry;
 use crate::repository::id::Base;
@@ -11,10 +11,12 @@ impl Entry<()> for Repositories {
 }
 
 /// An [`Entry`] describing _repositories_ parameters.
+#[serde_as]
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Repositories {
     #[serde(default)]
+    #[serde_as(as = "MapPreventDuplicates<_, _>")]
     repositories: HashMap<Base, Spec>,
 }
 
@@ -41,6 +43,7 @@ pub struct Spec {
     pub tags: Option<regex::Regex>,
 
     #[serde(default)]
+    #[serde_as(as = "MapPreventDuplicates<_, _>")]
     pub branch: HashMap<String, RefConfig>,
 }
 
@@ -52,7 +55,7 @@ impl Deref for Repositories {
     }
 }
 
-/// Repository visibility level to a non-owner user.
+/// Repository visibility level to a non-authoritative user.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Visibility {
@@ -67,6 +70,7 @@ pub enum Visibility {
     Archive,
 }
 
+/// Repository's ref configuration keys.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct RefConfig {

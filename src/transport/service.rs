@@ -9,6 +9,7 @@ use assh_connect::channel::{request::Request, Channel};
 use async_compat::CompatExt;
 use color_eyre::eyre;
 use futures::{AsyncReadExt, AsyncWriteExt};
+// TODO: Remove parse_display to enable bubbling up the parse errors.
 use parse_display::{Display, FromStr};
 use tokio::process::Command;
 

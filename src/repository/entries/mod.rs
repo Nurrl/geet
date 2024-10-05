@@ -50,6 +50,7 @@ pub trait Entry<Args>: Serialize + DeserializeOwned + From<Args> {
         .map_err(|err: ErrorKind| Error::new::<Args, Self>(err))
     }
 
+    /// Load the [`Entry`] from the repository's `HEAD`, or initialize it from the provided `args`.
     fn load_or_init(repository: &Repository, args: Args) -> Result<Self, Error> {
         Self::load(repository).or_else(|err| {
             // Initialize the entry only if it is not found

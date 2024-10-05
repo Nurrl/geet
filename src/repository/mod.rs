@@ -4,7 +4,7 @@ use std::{borrow::Cow, path::Path};
 
 use git2::RepositoryOpenFlags;
 
-/// Defines the default git branch name.
+/// The name of the default `git` branch.
 pub const DEFAULT_BRANCH: &str = "main";
 
 /// The name of the config repositories.
