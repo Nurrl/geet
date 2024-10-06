@@ -7,7 +7,7 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 use super::Error;
 
 pub static AUTHORIZED_NAMES: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-z0-9-_.]*$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-z0-9-_.]*$").expect("The regex was malformed"));
 
 /// A valid base for either a namespace or a repository name.
 #[derive(Debug, Display, Clone, PartialEq, Eq, Hash, DeserializeFromStr, SerializeDisplay)]

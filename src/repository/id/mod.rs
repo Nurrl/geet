@@ -95,10 +95,24 @@ impl FromStr for Id {
         let components: Vec<_> = path.components().collect();
 
         let (namespace, repository) = match components[..] {
-            [path::Component::Normal(repository)] => (None, repository.to_str().unwrap().parse()?),
+            [path::Component::Normal(repository)] => (
+                None,
+                repository
+                    .to_str()
+                    .expect("Path component is not UTF-8")
+                    .parse()?,
+            ),
             [path::Component::Normal(namespace), path::Component::Normal(repository)] => (
-                Some(namespace.to_str().unwrap().parse()?),
-                repository.to_str().unwrap().parse()?,
+                Some(
+                    namespace
+                        .to_str()
+                        .expect("Path component is not UTF-8")
+                        .parse()?,
+                ),
+                repository
+                    .to_str()
+                    .expect("Path component is not UTF-8")
+                    .parse()?,
             ),
             _ => Err(Error::MisformattedPath)?,
         };
@@ -158,6 +172,6 @@ mod tests {
     #[case(".toto.git")]
     #[case("toto..git")]
     fn it_denies_sketchy_repositories(#[case] path: &str) {
-        let _ = Id::from_str(path).unwrap_err();
+        let _ = Id::from_str(path).expect_err("The `id` was malformed, but didn't error");
     }
 }
