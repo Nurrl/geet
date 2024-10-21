@@ -16,10 +16,13 @@ pub struct Keychain {
 }
 
 impl Keychain {
+    /// Compute whether the [`Keychain`] contains the provided `key`.
     pub fn contains(&self, key: &PublicKey) -> bool {
+        let fingerprint = key.fingerprint(Default::default());
+
         self.keys
             .iter()
-            .any(|k| k.fingerprint(Default::default()) == key.fingerprint(Default::default()))
+            .any(|k| k.fingerprint(Default::default()) == fingerprint)
     }
 }
 

@@ -55,7 +55,7 @@ impl Deref for Repositories {
     }
 }
 
-/// Repository visibility level to a non-authoritative user.
+/// Repository's visibility configuration.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Visibility {
@@ -70,15 +70,19 @@ pub enum Visibility {
     Archive,
 }
 
-/// Repository's ref configuration keys.
+/// Repository's references (_branches, tags_) configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 pub struct RefConfig {
+    /// Whether _force pushes_ are allowed for this `ref`.
     pub allow_force: bool,
+
+    /// Whether _deletes_ are allowed for this `ref`.
     pub allow_delete: bool,
 }
 
 impl RefConfig {
+    /// Create a _protected_ [`RefConfig`].
     pub fn protected() -> Self {
         Self {
             allow_force: false,
@@ -86,6 +90,7 @@ impl RefConfig {
         }
     }
 
+    /// Create an _unprotected_ [`RefConfig`].
     pub fn unprotected() -> Self {
         Self {
             allow_force: true,

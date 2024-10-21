@@ -1,4 +1,4 @@
-//! Repository identifier parsing, handling and validation primitives.
+//! Repository _identifier_ parsing, handling and validation primitives.
 
 use std::{
     path::{self, Path, PathBuf},
@@ -14,13 +14,18 @@ mod name;
 pub use name::{Name, REPOSITORY_NAME_EXT};
 
 mod base;
-pub use base::Base;
+pub use base::{Base, AUTHORIZED_BASENAMES};
 
 /// The repository type regarding it's [`Id`].
 #[derive(Debug, PartialEq, Eq)]
 pub enum Kind {
+    /// The [`Id`] points to a _global authority_.
     GlobalAuthority,
+
+    /// The [`Id`] points to a _local authority_.
     LocalAuthority,
+
+    /// The [`Id`] points to a _normal repository_.
     Normal,
 }
 
@@ -34,6 +39,7 @@ pub struct Id {
 }
 
 impl Id {
+    /// Create an [`Id`] from a `namespace` and a `repository`.
     pub fn new(namespace: Option<Base>, repository: impl Into<Name>) -> Self {
         Self {
             namespace,
@@ -41,7 +47,7 @@ impl Id {
         }
     }
 
-    /// Get the [`Id`] of the _global authority_ repository.
+    /// Create an [`Id`] pointing to the _global authority_ repository.
     pub fn global_authority() -> Self {
         Self {
             namespace: None,
@@ -49,14 +55,17 @@ impl Id {
         }
     }
 
+    /// Access _namespace_ pointed by this [`Id`].
     pub fn namespace(&self) -> Option<&Base> {
         self.namespace.as_ref()
     }
 
+    /// Access _repository_ pointed by this [`Id`].
     pub fn repository(&self) -> &Name {
         &self.repository
     }
 
+    /// Compute _kind_ of repository pointed by this [`Id`].
     pub fn kind(&self) -> Kind {
         match &self.namespace {
             None if self.is_authority() => Kind::GlobalAuthority,
@@ -65,6 +74,7 @@ impl Id {
         }
     }
 
+    /// Whether this [`Id`] points to an _authority_.
     pub fn is_authority(&self) -> bool {
         self.repository == AUTHORITY_REPOSITORY_NAME
     }
