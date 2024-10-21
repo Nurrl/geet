@@ -1,7 +1,7 @@
 use regex::Regex;
 use thiserror::Error;
 
-use furrow::repository::{entries, Id};
+use furrow::{entries, Id};
 
 use super::Ref;
 

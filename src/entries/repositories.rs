@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, MapPreventDuplicates};
 
 use super::Entry;
-use crate::repository::id::Base;
+use crate::id::Base;
 
 impl Entry<()> for Repositories {
     const PATH: &'static str = "Repositories.toml";

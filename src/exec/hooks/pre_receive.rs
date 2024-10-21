@@ -4,7 +4,7 @@ use clap::Parser;
 use futures::{io::AllowStdIo, TryStreamExt};
 
 use super::{Error, Params, Ref, RefUpdate};
-use furrow::repository::{
+use furrow::{
     authority::{GlobalAuthority, LocalAuthority},
     entries::{Entry, RefConfig, Repositories},
     id::Kind,

@@ -3,7 +3,7 @@ use std::str::FromStr;
 use futures::{io::BufReader, AsyncBufReadExt, AsyncRead, Stream, TryStreamExt};
 use parse_display::{Display, FromStr};
 
-use furrow::repository::Repository;
+use furrow::Repository;
 
 use super::Error;
 

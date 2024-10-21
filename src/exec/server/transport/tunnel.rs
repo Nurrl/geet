@@ -13,7 +13,7 @@ use assh_connect::channel::{
 use color_eyre::eyre::{self, WrapErr};
 use futures::TryStreamExt;
 
-use furrow::repository::{
+use furrow::{
     authority::{GlobalAuthority, LocalAuthority},
     entries::{RegistrationPolicy, Visibility},
     id::Kind,

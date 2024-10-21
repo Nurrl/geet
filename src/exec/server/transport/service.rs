@@ -13,8 +13,6 @@ use futures::{AsyncReadExt, AsyncWriteExt};
 use parse_display::{Display, FromStr};
 use tokio::process::Command;
 
-use furrow::repository;
-
 /// A definition of what access the services requires to perform it's action.
 #[derive(Debug, PartialEq)]
 pub enum ServiceAccess {
@@ -28,14 +26,14 @@ pub enum ServiceAccess {
 #[display("{} '{repository}'", style = "kebab-case")]
 pub enum Service {
     /// Invoked by `git fetch-pack`, learns what objects the other side is missing, and sends them after packing.
-    GitUploadPack { repository: repository::Id },
+    GitUploadPack { repository: furrow::Id },
 
     /// Invoked by `git send-pack` and updates the repository with the information fed from the remote end.
-    GitReceivePack { repository: repository::Id },
+    GitReceivePack { repository: furrow::Id },
 }
 
 impl Service {
-    pub fn target(&self) -> &repository::Id {
+    pub fn target(&self) -> &furrow::Id {
         match self {
             Service::GitUploadPack { repository } => repository,
             Service::GitReceivePack { repository } => repository,

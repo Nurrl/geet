@@ -1,20 +1,8 @@
-//! Types and structs related to _repositories & authorities_.
-
-use std::{borrow::Cow, path::Path};
+use std::path::Path;
 
 use git2::RepositoryOpenFlags;
 
-/// The name of the default `git` branch.
-pub const DEFAULT_BRANCH: &str = "main";
-
-/// The name of the config repositories.
-pub const AUTHORITY_REPOSITORY_NAME: id::Name = id::Name(id::Base(Cow::Borrowed("_")));
-
-pub mod id;
-pub use id::Id;
-
-pub mod authority;
-pub mod entries;
+use super::{Id, DEFAULT_BRANCH};
 
 /// A handle to a bare repository.
 pub struct Repository {

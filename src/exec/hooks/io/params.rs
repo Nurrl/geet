@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-use furrow::repository::Id;
+use furrow::Id;
 
 /// The name of the environment variable used to pass the repository id to the hooks.
 pub const REPOSITORY_ID_ENV: &str = "REPOSITORY_ID";

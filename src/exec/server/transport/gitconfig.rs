@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use furrow::repository::DEFAULT_BRANCH;
+use furrow::DEFAULT_BRANCH;
 
 /// A handle to a `.gitconfig` file for our remote.
 #[derive(Debug)]

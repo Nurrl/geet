@@ -20,4 +20,19 @@
 )]
 #![forbid(unsafe_code)]
 
-pub mod repository;
+use std::borrow::Cow;
+
+/// The name of the _default git branch_.
+pub const DEFAULT_BRANCH: &str = "main";
+
+/// The name of the _config repositories_.
+pub const AUTHORITY_REPOSITORY_NAME: id::Name = id::Name(id::Base(Cow::Borrowed("_")));
+
+mod repository;
+pub use repository::Repository;
+
+pub mod id;
+pub use id::Id;
+
+pub mod authority;
+pub mod entries;
