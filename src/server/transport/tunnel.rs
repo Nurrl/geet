@@ -13,19 +13,15 @@ use assh_connect::channel::{
 use color_eyre::eyre::{self, WrapErr};
 use futures::TryStreamExt;
 
-use crate::{
-    hooks::Hooks,
-    repository::{
-        authority::{GlobalAuthority, LocalAuthority},
-        entries::{RegistrationPolicy, Visibility},
-        id::Kind,
-        Id, Repository,
-    },
-    server::Socket,
-    transport::service::ServiceAccess,
+use furrow::repository::{
+    authority::{GlobalAuthority, LocalAuthority},
+    entries::{RegistrationPolicy, Visibility},
+    id::Kind,
+    Id, Repository,
 };
 
-use super::{GitConfig, Service};
+use super::{service::ServiceAccess, GitConfig, Service};
+use crate::{hooks::Hooks, server::Socket};
 
 /// A tunnel a request is operated in,
 /// this handles messages from a `session` type [`Channel`].

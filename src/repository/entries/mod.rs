@@ -62,7 +62,7 @@ pub trait Entry<Args>: Serialize + DeserializeOwned + From<Args> {
                     let config = Self::from(args);
 
                     config
-                        .store(
+                        .commit(
                             repository,
                             &format!("Initialization of the `{}` configuration file", Self::PATH),
                         )
@@ -73,8 +73,8 @@ pub trait Entry<Args>: Serialize + DeserializeOwned + From<Args> {
         })
     }
 
-    /// Store the [`Entry`] to the repository with a custom commit `message`.
-    fn store(&self, repository: &Repository, message: &str) -> Result<(), Error> {
+    /// Commit the [`Entry`] to the repository with a custom commit `message`.
+    fn commit(&self, repository: &Repository, message: &str) -> Result<(), Error> {
         (|| {
             let blob = repository.blob(toml::to_string_pretty(&self)?.as_bytes())?;
             let signature = git2::Signature::now("furrow", "git@server.commit")?;

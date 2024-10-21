@@ -6,7 +6,7 @@ use clap::Parser;
 use color_eyre::eyre;
 use strum::{EnumVariantNames, VariantNames};
 
-use crate::repository::Id;
+use furrow::repository::Id;
 
 pub mod io;
 use io::{Error, Params, Ref, RefUpdate};

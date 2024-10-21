@@ -7,8 +7,10 @@ use color_eyre::eyre;
 use futures::TryStreamExt;
 use tracing::Instrument;
 
-use super::Socket;
-use crate::transport::{GitConfig, Tunnel};
+use super::{
+    transport::{GitConfig, Tunnel},
+    Socket,
+};
 
 /// A structure containing connection informations
 /// and configuration to process incoming sessions.

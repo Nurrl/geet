@@ -2,14 +2,17 @@ use clap::Parser;
 use color_eyre::eyre;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
+mod hooks;
+mod server;
+
 #[derive(Debug, Parser)]
 #[command(multicall = true, rename_all = "kebab-case")]
 pub enum Cli {
     #[command(name = env!("CARGO_PKG_NAME"))]
-    Server(furrow::Server),
+    Server(server::Server),
 
     #[command(flatten)]
-    Hooks(furrow::Hooks),
+    Hooks(hooks::Hooks),
 }
 
 #[tokio::main]

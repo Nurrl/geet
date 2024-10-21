@@ -13,7 +13,7 @@ use futures::{AsyncReadExt, AsyncWriteExt};
 use parse_display::{Display, FromStr};
 use tokio::process::Command;
 
-use crate::repository;
+use furrow::repository;
 
 /// A definition of what access the services requires to perform it's action.
 #[derive(Debug, PartialEq)]

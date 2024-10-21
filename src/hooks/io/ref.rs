@@ -3,8 +3,9 @@ use std::str::FromStr;
 use futures::{io::BufReader, AsyncBufReadExt, AsyncRead, Stream, TryStreamExt};
 use parse_display::{Display, FromStr};
 
+use furrow::repository::Repository;
+
 use super::Error;
-use crate::repository::Repository;
 
 /// An enum differentiating references of type [`Ref::Branch`] and of type [`Ref::Tag`].
 #[derive(Debug, FromStr, Display)]

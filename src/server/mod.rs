@@ -12,14 +12,16 @@ use futures::{
 };
 use tokio::net::TcpStream;
 
-use crate::transport::GitConfig;
-
 mod connection;
-pub use connection::Connection;
+use connection::Connection;
 
 mod factory;
-pub use factory::Factory;
+use factory::Factory;
 
+mod transport;
+use transport::GitConfig;
+
+/// An type alias for the socket used throughout the server implementation.
 pub type Socket = BufReader<BufWriter<Compat<TcpStream>>>;
 
 /// A lightweight, self-configured, ssh git remote.

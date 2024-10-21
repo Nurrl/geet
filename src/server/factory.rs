@@ -4,8 +4,7 @@ use assh_auth::handler;
 use color_eyre::eyre;
 use tokio::sync::oneshot;
 
-use super::{server::Server, Connection, Socket};
-use crate::transport::GitConfig;
+use super::{server::Server, transport::GitConfig, Connection, Socket};
 
 /// A factory creating [`Connection`] from the [`Server`] configuration.
 #[derive(Debug)]
