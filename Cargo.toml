@@ -14,7 +14,7 @@ edition = "2021"
 
 [[bin]]
 name = "furrow"
-path = "src/exec/main.rs"
+path = "exec/main.rs"
 
 [dependencies]
 async-trait = "0.1.73"
