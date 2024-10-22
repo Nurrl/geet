@@ -7,12 +7,12 @@ use super::Entry;
 #[error("`{path}`: {inner}")]
 pub struct Error {
     path: &'static str,
-    inner: ErrorKind,
+    inner: Kind,
 }
 
 impl Error {
     /// Create a new error from it's kind and the `T` type.
-    pub fn new<A, T: Entry<A>>(inner: impl Into<ErrorKind>) -> Self {
+    pub fn new<A, T: Entry<A>>(inner: impl Into<Kind>) -> Self {
         Self {
             path: T::PATH,
             inner: inner.into(),
@@ -20,14 +20,14 @@ impl Error {
     }
 
     /// Access the `kind` of this error.
-    pub fn kind(&self) -> &ErrorKind {
+    pub fn kind(&self) -> &Kind {
         &self.inner
     }
 }
 
 /// The kind of [`struct@Error`]s that can occur while manipulating an [`Entry`].
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum Kind {
     /// A _git repository_ error.
     #[error("Git error: {0}")]
     Git(#[from] git2::Error),

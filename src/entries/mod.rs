@@ -8,7 +8,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use super::Repository;
 
 mod error;
-pub use error::{Error, ErrorKind};
+pub use error::{Error, Kind as ErrorKind};
 
 mod global;
 pub use global::{Global, RegistrationPolicy};
@@ -79,34 +79,31 @@ pub trait Entry<Args>: Serialize + DeserializeOwned + From<Args> {
             let blob = repository.blob(toml::to_string_pretty(&self)?.as_bytes())?;
             let signature = git2::Signature::now("furrow", "git@server.commit")?;
 
-            match repository
+            if let Some(parent) = repository
                 .head()
                 .ok()
                 .map(|reference| reference.peel_to_commit())
                 .transpose()?
             {
-                Some(parent) => {
-                    let tree = TreeUpdateBuilder::new()
-                        .upsert(Self::PATH, blob, FileMode::Blob)
-                        .create_updated(repository, &parent.tree()?)?;
-                    let tree = repository.find_tree(tree)?;
+                let tree = TreeUpdateBuilder::new()
+                    .upsert(Self::PATH, blob, FileMode::Blob)
+                    .create_updated(repository, &parent.tree()?)?;
+                let tree = repository.find_tree(tree)?;
 
-                    repository.commit(
-                        Some("HEAD"),
-                        &signature,
-                        &signature,
-                        message,
-                        &tree,
-                        &[&parent],
-                    )?;
-                }
-                None => {
-                    let mut treebuilder = repository.treebuilder(None)?;
-                    treebuilder.insert(Self::PATH, blob, FileMode::Blob.into())?;
-                    let tree = repository.find_tree(treebuilder.write()?)?;
+                repository.commit(
+                    Some("HEAD"),
+                    &signature,
+                    &signature,
+                    message,
+                    &tree,
+                    &[&parent],
+                )?;
+            } else {
+                let mut treebuilder = repository.treebuilder(None)?;
+                treebuilder.insert(Self::PATH, blob, FileMode::Blob.into())?;
+                let tree = repository.find_tree(treebuilder.write()?)?;
 
-                    repository.commit(Some("HEAD"), &signature, &signature, message, &tree, &[])?;
-                }
+                repository.commit(Some("HEAD"), &signature, &signature, message, &tree, &[])?;
             }
 
             Ok(())
