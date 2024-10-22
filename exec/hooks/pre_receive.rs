@@ -5,7 +5,7 @@ use futures::{io::AllowStdIo, TryStreamExt};
 
 use super::{Error, Params, Ref, RefUpdate};
 use furrow::{
-    authority::{GlobalAuthority, LocalAuthority},
+    authority::{Global, Local},
     entries::{Entry, RefConfig, Repositories},
     id::Kind,
     Id, Repository,
@@ -59,11 +59,10 @@ impl PreReceive {
                     // Verify that entries in the repository are correctly
                     // formatted before allowing the push and extract it's repositories list.
                     let new = if id.namespace().is_none() {
-                        GlobalAuthority::load_at(&repository, update.newrev)
+                        Global::load_at(&repository, update.newrev)
                             .map(|global| global.local.repositories)
                     } else {
-                        LocalAuthority::load_at(&repository, update.newrev)
-                            .map(|local| local.repositories)
+                        Local::load_at(&repository, update.newrev).map(|local| local.repositories)
                     }?;
 
                     // Load the current repositories list from the HEAD.
