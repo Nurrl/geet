@@ -58,6 +58,6 @@ toml = { version = "0.8.19", features = ["preserve_order"] }
 rstest = "0.18.2"
 
 [patch.crates-io]
-assh = { git = "https://github.com/lowlevl/assh.git", rev = "6293818" }
-assh-auth = { git = "https://github.com/lowlevl/assh.git", rev = "6293818" }
-assh-connect = { git = "https://github.com/lowlevl/assh.git", rev = "6293818" }
+assh = { git = "https://github.com/lowlevl/assh.git", rev = "1ece878" }
+assh-auth = { git = "https://github.com/lowlevl/assh.git", rev = "1ece878" }
+assh-connect = { git = "https://github.com/lowlevl/assh.git", rev = "1ece878" }
